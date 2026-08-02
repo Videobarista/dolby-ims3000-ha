@@ -1,0 +1,135 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Dolby IMS3000",
+        "description": "Connect to the media block's KLV control port. The server must be reachable on TCP {port} from Home Assistant.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "name": "Name",
+          "allow_control": "Allow playback control"
+        },
+        "data_description": {
+          "allow_control": "Leave off for monitoring only. When off, play, pause and scheduler changes are refused."
+        }
+      },
+      "reconfigure": {
+        "title": "Change connection",
+        "data": {
+          "host": "Host",
+          "port": "Port"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the server on that host and port.",
+      "invalid_response": "Connected, but the device did not answer as a Doremi/Dolby cinema server.",
+      "unknown": "Unexpected error. Check the Home Assistant log."
+    },
+    "abort": {
+      "already_configured": "This server is already set up.",
+      "reconfigure_successful": "Connection updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "allow_control": "Allow playback control",
+          "scan_interval": "Poll interval",
+          "catalog_interval": "Catalogue refresh (every N polls)",
+          "timeout": "Command timeout",
+          "position_unit": "Playlist position unit"
+        },
+        "data_description": {
+          "catalog_interval": "How often the show, content and key lists are re-read. These change rarely, so a high value keeps traffic off the projection network.",
+          "position_unit": "Whether the server reports playlist position in seconds or in edit units. Unverified across firmware versions; switch this if reported durations look wrong."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "online": { "name": "Online" },
+      "show_running": { "name": "Show running" },
+      "show_loaded": { "name": "Show loaded" },
+      "content_encrypted": { "name": "Content encrypted" }
+    },
+    "select": {
+      "armed_show": { "name": "Armed show" }
+    },
+    "switch": {
+      "scheduler": { "name": "Scheduler" }
+    },
+    "sensor": {
+      "playback_state": {
+        "name": "Playback state",
+        "state": {
+          "unknown": "Unknown",
+          "stop": "Stopped",
+          "play": "Playing",
+          "pause": "Paused"
+        }
+      },
+      "current_title": { "name": "Current title" },
+      "position": { "name": "Playlist position" },
+      "duration": { "name": "Playlist duration" },
+      "remaining": { "name": "Time remaining" },
+      "spl_count": { "name": "Show playlists" },
+      "cpl_count": { "name": "Compositions" },
+      "kdm_count": { "name": "Keys" },
+      "next_schedule": { "name": "Next scheduled show" },
+      "timezone": { "name": "Time zone" },
+      "software_version": { "name": "Software version" },
+      "api_version": { "name": "API protocol version" },
+      "serial_number": { "name": "Serial number" }
+    }
+  },
+  "selector": {
+    "position_unit": {
+      "options": {
+        "seconds": "Seconds",
+        "edit_units": "Edit units (convert using frame rate)"
+      }
+    }
+  },
+  "services": {
+    "play_spl": {
+      "name": "Play show playlist",
+      "description": "Schedule a show playlist to start shortly. The server has no direct 'load and play' command, so this queues the show with the scheduler.",
+      "fields": {
+        "entry_id": { "name": "Server", "description": "Which configured server to talk to." },
+        "spl_id": { "name": "SPL UUID", "description": "UUID of the show playlist to start." },
+        "delay": { "name": "Delay", "description": "Seconds from now that the show should begin." },
+        "annotation": { "name": "Annotation", "description": "Label recorded against the schedule entry." }
+      }
+    },
+    "validate_cpl": {
+      "name": "Validate composition",
+      "description": "Ask the server whether a composition is playable right now, including whether a valid key is present.",
+      "fields": {
+        "entry_id": { "name": "Server", "description": "Which configured server to talk to." },
+        "cpl_id": { "name": "CPL UUID", "description": "UUID of the composition to check." }
+      }
+    },
+    "ingest_job": {
+      "name": "Queue ingest job",
+      "description": "Submit an ingest job description to the server.",
+      "fields": {
+        "entry_id": { "name": "Server", "description": "Which configured server to talk to." },
+        "xml": { "name": "Job XML", "description": "Ingest job document." }
+      }
+    },
+    "raw_command": {
+      "name": "Raw command",
+      "description": "Send any supported protocol command and return the decoded reply. Intended for verifying this integration against real hardware.",
+      "fields": {
+        "entry_id": { "name": "Server", "description": "Which configured server to talk to." },
+        "command": { "name": "Command", "description": "Command name, for example GetProductInfo." },
+        "params": { "name": "Parameters", "description": "Named parameters for the command." }
+      }
+    }
+  }
+}

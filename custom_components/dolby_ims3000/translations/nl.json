@@ -1,0 +1,135 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Dolby IMS3000",
+        "description": "Verbind met de KLV-besturingspoort van het media block. De server moet bereikbaar zijn op TCP {port} vanaf Home Assistant.",
+        "data": {
+          "host": "Host",
+          "port": "Poort",
+          "name": "Naam",
+          "allow_control": "Afspeelbesturing toestaan"
+        },
+        "data_description": {
+          "allow_control": "Laat uit voor alleen uitlezen. Staat dit uit, dan worden play, pause en wijzigingen aan de planner geweigerd."
+        }
+      },
+      "reconfigure": {
+        "title": "Verbinding wijzigen",
+        "data": {
+          "host": "Host",
+          "port": "Poort"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kan de server niet bereiken op die host en poort.",
+      "invalid_response": "Verbonden, maar het apparaat antwoordde niet als een Doremi/Dolby cinemaserver.",
+      "unknown": "Onverwachte fout. Bekijk het Home Assistant-logboek."
+    },
+    "abort": {
+      "already_configured": "Deze server is al ingesteld.",
+      "reconfigure_successful": "Verbinding bijgewerkt."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opties",
+        "data": {
+          "allow_control": "Afspeelbesturing toestaan",
+          "scan_interval": "Ophaalinterval",
+          "catalog_interval": "Catalogus verversen (elke N pollingrondes)",
+          "timeout": "Commando-timeout",
+          "position_unit": "Eenheid van afspeelpositie"
+        },
+        "data_description": {
+          "catalog_interval": "Hoe vaak de shows-, content- en sleutellijsten opnieuw worden gelezen. Deze veranderen zelden, dus een hoge waarde houdt verkeer van het projectienetwerk af.",
+          "position_unit": "Of de server de positie in seconden of in edit units rapporteert. Niet geverifieerd over firmwareversies; wijzig dit als getoonde tijden niet kloppen."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "online": { "name": "Online" },
+      "show_running": { "name": "Voorstelling loopt" },
+      "show_loaded": { "name": "Voorstelling geladen" },
+      "content_encrypted": { "name": "Content versleuteld" }
+    },
+    "select": {
+      "armed_show": { "name": "Geselecteerde voorstelling" }
+    },
+    "switch": {
+      "scheduler": { "name": "Planner" }
+    },
+    "sensor": {
+      "playback_state": {
+        "name": "Afspeelstatus",
+        "state": {
+          "unknown": "Onbekend",
+          "stop": "Gestopt",
+          "play": "Speelt af",
+          "pause": "Gepauzeerd"
+        }
+      },
+      "current_title": { "name": "Huidige titel" },
+      "position": { "name": "Positie in playlist" },
+      "duration": { "name": "Duur van playlist" },
+      "remaining": { "name": "Resterende tijd" },
+      "spl_count": { "name": "Show playlists" },
+      "cpl_count": { "name": "Composities" },
+      "kdm_count": { "name": "Sleutels" },
+      "next_schedule": { "name": "Volgende geplande voorstelling" },
+      "timezone": { "name": "Tijdzone" },
+      "software_version": { "name": "Softwareversie" },
+      "api_version": { "name": "API-protocolversie" },
+      "serial_number": { "name": "Serienummer" }
+    }
+  },
+  "selector": {
+    "position_unit": {
+      "options": {
+        "seconds": "Seconden",
+        "edit_units": "Edit units (omrekenen met framerate)"
+      }
+    }
+  },
+  "services": {
+    "play_spl": {
+      "name": "Show playlist afspelen",
+      "description": "Plan een show playlist om zo dadelijk te starten. De server kent geen direct 'laden en afspelen'-commando, dus dit zet de voorstelling in de planner.",
+      "fields": {
+        "entry_id": { "name": "Server", "description": "Met welke ingestelde server communiceren." },
+        "spl_id": { "name": "SPL-UUID", "description": "UUID van de te starten show playlist." },
+        "delay": { "name": "Vertraging", "description": "Aantal seconden vanaf nu waarop de voorstelling begint." },
+        "annotation": { "name": "Annotatie", "description": "Label dat bij de planningsregel wordt vastgelegd." }
+      }
+    },
+    "validate_cpl": {
+      "name": "Compositie valideren",
+      "description": "Vraag de server of een compositie nu afspeelbaar is, inclusief of er een geldige sleutel aanwezig is.",
+      "fields": {
+        "entry_id": { "name": "Server", "description": "Met welke ingestelde server communiceren." },
+        "cpl_id": { "name": "CPL-UUID", "description": "UUID van de te controleren compositie." }
+      }
+    },
+    "ingest_job": {
+      "name": "Ingest-taak inplannen",
+      "description": "Dien een ingest-taakbeschrijving in bij de server.",
+      "fields": {
+        "entry_id": { "name": "Server", "description": "Met welke ingestelde server communiceren." },
+        "xml": { "name": "Taak-XML", "description": "Ingest-taakdocument." }
+      }
+    },
+    "raw_command": {
+      "name": "Ruw commando",
+      "description": "Stuur een willekeurig ondersteund protocolcommando en geef het gedecodeerde antwoord terug. Bedoeld om deze integratie tegen echte hardware te verifiëren.",
+      "fields": {
+        "entry_id": { "name": "Server", "description": "Met welke ingestelde server communiceren." },
+        "command": { "name": "Commando", "description": "Commandonaam, bijvoorbeeld GetProductInfo." },
+        "params": { "name": "Parameters", "description": "Benoemde parameters voor het commando." }
+      }
+    }
+  }
+}
