@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Dolby IMS3000",
-        "description": "Connect to the media block's KLV control port. The server must be reachable on TCP {port} from Home Assistant.",
+        "description": "Connect to the media block's KLV control port. The server must be reachable on TCP 11730 from Home Assistant.",
         "data": {
           "host": "Host",
           "port": "Port",

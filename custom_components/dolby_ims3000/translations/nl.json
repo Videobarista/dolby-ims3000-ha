@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Dolby IMS3000",
-        "description": "Verbind met de KLV-besturingspoort van het media block. De server moet bereikbaar zijn op TCP {port} vanaf Home Assistant.",
+        "description": "Verbind met de KLV-besturingspoort van het media block. De server moet bereikbaar zijn op TCP 11730 vanaf Home Assistant.",
         "data": {
           "host": "Host",
           "port": "Poort",
