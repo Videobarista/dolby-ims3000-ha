@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api import IMSClient, IMSCommandError, IMSConnectionError
 from .const import (
@@ -26,6 +27,8 @@ class IMSData:
     """Everything the entities read from."""
 
     available: bool = False
+    last_seen: datetime | None = None
+    offline_since: datetime | None = None
     status: dict[str, Any] = field(default_factory=dict)
     product: dict[str, Any] = field(default_factory=dict)
     api_version: dict[str, Any] = field(default_factory=dict)
@@ -75,6 +78,9 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
         # SPL selected in the UI but not yet started.  Purely local state.
         self.armed_spl: str | None = None
         self._tick = 0
+        # A powered-down projection server is normal, not a failure.  Only the
+        # very first poll is allowed to hard-fail, so setup still retries.
+        self._ever_online = False
         self._catalog_every: int = entry.options.get(
             CONF_CATALOG_INTERVAL, DEFAULT_CATALOG_INTERVAL
         )
@@ -91,12 +97,22 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
             data.last_error = str(err)
             _LOGGER.debug("Status command rejected: %s", err)
         except IMSConnectionError as err:
-            data.available = False
-            data.last_error = str(err)
-            raise UpdateFailed(str(err)) from err
+            if not self._ever_online:
+                # Never reached it yet: let HA retry setup properly.
+                data.available = False
+                data.last_error = str(err)
+                raise UpdateFailed(str(err)) from err
+            return self._mark_offline(data, err)
 
+        if not data.available:
+            _LOGGER.info(
+                "%s is reachable again at %s", self.entry.title, self.client.host
+            )
         data.available = True
+        data.offline_since = None
+        data.last_seen = dt_util.utcnow()
         data.last_error = None
+        self._ever_online = True
 
         # Cheap per-poll extras.  Failures here must not mark the device down.
         data.scheduler_enabled = await self._try(self.client.scheduler_enabled)
@@ -115,6 +131,35 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
             if info:
                 data.cpl_info[cpl_id] = info
 
+        return data
+
+    def _mark_offline(self, data: IMSData, err: Exception) -> IMSData:
+        """Treat an unreachable server as powered down, not as an error.
+
+        Cinema servers are switched off outside show hours.  Raising
+        UpdateFailed for that fills the log with errors and drops every entity
+        to "unavailable"; instead the connectivity sensor goes off and the
+        media player reports "off".
+        """
+        if data.available:
+            data.offline_since = dt_util.utcnow()
+            _LOGGER.info(
+                "%s is unreachable at %s, treating it as powered off (%s)",
+                self.entry.title,
+                self.client.host,
+                err,
+            )
+        else:
+            _LOGGER.debug("%s still unreachable: %s", self.entry.title, err)
+
+        data.available = False
+        data.last_error = str(err)
+        # Drop volatile state so nothing reports a frozen position or title.
+        data.status = {}
+        data.scheduler_enabled = None
+        data.current_schedule = None
+        data.next_schedule = None
+        data.next_schedule_info = {}
         return data
 
     async def _refresh_catalogue(self, data: IMSData) -> None:

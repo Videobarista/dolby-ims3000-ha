@@ -52,16 +52,28 @@
   },
   "entity": {
     "binary_sensor": {
-      "online": { "name": "Online" },
-      "show_running": { "name": "Show running" },
-      "show_loaded": { "name": "Show loaded" },
-      "content_encrypted": { "name": "Content encrypted" }
+      "online": {
+        "name": "Online"
+      },
+      "show_running": {
+        "name": "Show running"
+      },
+      "show_loaded": {
+        "name": "Show loaded"
+      },
+      "content_encrypted": {
+        "name": "Content encrypted"
+      }
     },
     "select": {
-      "armed_show": { "name": "Armed show" }
+      "armed_show": {
+        "name": "Armed show"
+      }
     },
     "switch": {
-      "scheduler": { "name": "Scheduler" }
+      "scheduler": {
+        "name": "Scheduler"
+      }
     },
     "sensor": {
       "playback_state": {
@@ -73,18 +85,45 @@
           "pause": "Paused"
         }
       },
-      "current_title": { "name": "Current title" },
-      "position": { "name": "Playlist position" },
-      "duration": { "name": "Playlist duration" },
-      "remaining": { "name": "Time remaining" },
-      "spl_count": { "name": "Show playlists" },
-      "cpl_count": { "name": "Compositions" },
-      "kdm_count": { "name": "Keys" },
-      "next_schedule": { "name": "Next scheduled show" },
-      "timezone": { "name": "Time zone" },
-      "software_version": { "name": "Software version" },
-      "api_version": { "name": "API protocol version" },
-      "serial_number": { "name": "Serial number" }
+      "current_title": {
+        "name": "Current title"
+      },
+      "position": {
+        "name": "Playlist position"
+      },
+      "duration": {
+        "name": "Playlist duration"
+      },
+      "remaining": {
+        "name": "Time remaining"
+      },
+      "spl_count": {
+        "name": "Show playlists"
+      },
+      "cpl_count": {
+        "name": "Compositions"
+      },
+      "kdm_count": {
+        "name": "Keys"
+      },
+      "next_schedule": {
+        "name": "Next scheduled show"
+      },
+      "timezone": {
+        "name": "Time zone"
+      },
+      "software_version": {
+        "name": "Software version"
+      },
+      "api_version": {
+        "name": "API protocol version"
+      },
+      "serial_number": {
+        "name": "Serial number"
+      },
+      "last_seen": {
+        "name": "Last seen"
+      }
     }
   },
   "selector": {
@@ -100,35 +139,68 @@
       "name": "Play show playlist",
       "description": "Schedule a show playlist to start shortly. The server has no direct 'load and play' command, so this queues the show with the scheduler.",
       "fields": {
-        "entry_id": { "name": "Server", "description": "Which configured server to talk to." },
-        "spl_id": { "name": "SPL UUID", "description": "UUID of the show playlist to start." },
-        "delay": { "name": "Delay", "description": "Seconds from now that the show should begin." },
-        "annotation": { "name": "Annotation", "description": "Label recorded against the schedule entry." }
+        "entry_id": {
+          "name": "Server",
+          "description": "Which configured server to talk to."
+        },
+        "spl_id": {
+          "name": "SPL UUID",
+          "description": "UUID of the show playlist to start."
+        },
+        "delay": {
+          "name": "Delay",
+          "description": "Seconds from now that the show should begin."
+        },
+        "annotation": {
+          "name": "Annotation",
+          "description": "Label recorded against the schedule entry."
+        }
       }
     },
     "validate_cpl": {
       "name": "Validate composition",
       "description": "Ask the server whether a composition is playable right now, including whether a valid key is present.",
       "fields": {
-        "entry_id": { "name": "Server", "description": "Which configured server to talk to." },
-        "cpl_id": { "name": "CPL UUID", "description": "UUID of the composition to check." }
+        "entry_id": {
+          "name": "Server",
+          "description": "Which configured server to talk to."
+        },
+        "cpl_id": {
+          "name": "CPL UUID",
+          "description": "UUID of the composition to check."
+        }
       }
     },
     "ingest_job": {
       "name": "Queue ingest job",
       "description": "Submit an ingest job description to the server.",
       "fields": {
-        "entry_id": { "name": "Server", "description": "Which configured server to talk to." },
-        "xml": { "name": "Job XML", "description": "Ingest job document." }
+        "entry_id": {
+          "name": "Server",
+          "description": "Which configured server to talk to."
+        },
+        "xml": {
+          "name": "Job XML",
+          "description": "Ingest job document."
+        }
       }
     },
     "raw_command": {
       "name": "Raw command",
       "description": "Send any supported protocol command and return the decoded reply. Intended for verifying this integration against real hardware.",
       "fields": {
-        "entry_id": { "name": "Server", "description": "Which configured server to talk to." },
-        "command": { "name": "Command", "description": "Command name, for example GetProductInfo." },
-        "params": { "name": "Parameters", "description": "Named parameters for the command." }
+        "entry_id": {
+          "name": "Server",
+          "description": "Which configured server to talk to."
+        },
+        "command": {
+          "name": "Command",
+          "description": "Command name, for example GetProductInfo."
+        },
+        "params": {
+          "name": "Parameters",
+          "description": "Named parameters for the command."
+        }
       }
     }
   }

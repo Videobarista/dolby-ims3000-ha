@@ -86,7 +86,7 @@ class IMSBinarySensor(IMSEntity, BinarySensorEntity):
     @property
     def available(self) -> bool:
         if self.entity_description.always_available:
-            return True
+            return bool(self.coordinator.last_update_success)
         return super().available
 
     @property

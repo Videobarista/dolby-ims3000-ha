@@ -78,8 +78,14 @@ class IMSMediaPlayer(IMSEntity, MediaPlayerEntity):
     # -- state -----------------------------------------------------------
 
     @property
+    def available(self) -> bool:
+        # Stay available while the server is powered down so the player can
+        # report "off" instead of dropping out of the UI entirely.
+        return bool(self.coordinator.last_update_success and self.coordinator.data)
+
+    @property
     def state(self) -> MediaPlayerState:
-        if not self.available:
+        if not self.coordinator.data.available:
             return MediaPlayerState.OFF
         raw = self.coordinator.data.status.get("playback_state")
         return STATE_MAP.get(raw, MediaPlayerState.IDLE)

@@ -27,6 +27,8 @@ class IMSSensorDescription(SensorEntityDescription):
 
     value_fn: Callable[[IMSData], Any]
     attrs_fn: Callable[[IMSData], dict[str, Any]] | None = None
+    # True for entities that must keep reporting while the server is down.
+    always_available: bool = False
 
 
 def _remaining(data: IMSData) -> int | None:
@@ -167,6 +169,14 @@ SENSORS: tuple[IMSSensorDescription, ...] = (
         entity_registry_enabled_default=False,
         value_fn=lambda d: d.product.get("product_serial"),
     ),
+    IMSSensorDescription(
+        key="last_seen",
+        translation_key="last_seen",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.last_seen,
+        always_available=True,
+    ),
 )
 
 
@@ -189,6 +199,12 @@ class IMSSensor(IMSEntity, SensorEntity):
     ) -> None:
         super().__init__(coordinator, description.key)
         self.entity_description = description
+
+    @property
+    def available(self) -> bool:
+        if self.entity_description.always_available:
+            return bool(self.coordinator.last_update_success)
+        return super().available
 
     @property
     def native_value(self) -> Any:
