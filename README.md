@@ -171,7 +171,7 @@ downloadable from the server's own web interface. That path is not used here yet
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Copyright © 2026 Videobarista.
+MIT — see [LICENSE](LICENSE). Copyright © 2026 VideoBarista.
 
 ---
 
