@@ -3,8 +3,10 @@
 Home Assistant integration for Dolby (formerly Doremi) digital cinema servers, speaking the
 native KLV control protocol on TCP **11730**.
 
-Built for the **IMS3000**. It should also work on the IMS2000, IMS1000, ShowVault, DCP-2000
-and DCP-2K4, which share the same intra-theatre message set.
+Verified in day-to-day use against the **IMS3000** and the **DCP-2000**. It should also work
+on the IMS2000, IMS1000, ShowVault and DCP-2K4, which share the same intra-theatre message
+set — if you run one of those, a [probe run](#verifying-against-your-server) and an issue with
+your results are welcome.
 
 ---
 
