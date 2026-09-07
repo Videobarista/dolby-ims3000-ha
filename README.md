@@ -6,12 +6,6 @@ native KLV control protocol on TCP **11730**.
 Built for the **IMS3000**. It should also work on the IMS2000, IMS1000, ShowVault, DCP-2000
 and DCP-2K4, which share the same intra-theatre message set.
 
-> **Status: alpha, and honest about it.** This was written against published protocol
-> documentation and existing open-source libraries, without access to a physical server.
-> The framing layer is covered by an offline test suite; the parts that talk to real hardware
-> are unverified. See [Verifying against your server](#verifying-against-your-server) — and
-> please open an issue with your results, good or bad.
-
 ---
 
 ## Entities
