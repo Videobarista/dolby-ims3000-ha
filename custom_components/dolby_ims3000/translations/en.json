@@ -130,7 +130,8 @@
     "position_unit": {
       "options": {
         "seconds": "Seconds",
-        "edit_units": "Edit units (convert using frame rate)"
+        "edit_units": "Edit units (convert using frame rate)",
+        "auto": "Automatic (use the edit rate the server reports)"
       }
     }
   },

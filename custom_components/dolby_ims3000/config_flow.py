@@ -37,7 +37,7 @@ from .const import (
     DEFAULT_TIMEOUT,
     DOMAIN,
     POSITION_UNITS,
-    POSITION_UNIT_SECONDS,
+    DEFAULT_POSITION_UNIT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ class DolbyIMS3000ConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
                         CONF_CATALOG_INTERVAL: DEFAULT_CATALOG_INTERVAL,
                         CONF_TIMEOUT: DEFAULT_TIMEOUT,
-                        CONF_POSITION_UNIT: POSITION_UNIT_SECONDS,
+                        CONF_POSITION_UNIT: DEFAULT_POSITION_UNIT,
                     },
                 )
 
@@ -204,7 +204,7 @@ class DolbyIMS3000OptionsFlow(OptionsFlow):
                 ),
                 vol.Required(
                     CONF_POSITION_UNIT,
-                    default=options.get(CONF_POSITION_UNIT, POSITION_UNIT_SECONDS),
+                    default=options.get(CONF_POSITION_UNIT, DEFAULT_POSITION_UNIT),
                 ): SelectSelector(
                     SelectSelectorConfig(
                         options=POSITION_UNITS,

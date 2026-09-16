@@ -31,9 +31,22 @@ class IMSSensorDescription(SensorEntityDescription):
     always_available: bool = False
 
 
+def _next_schedule(data: IMSData) -> str | None:
+    """Name of the next scheduled show, or None when nothing is queued.
+
+    The server returns schedule id 0 to mean "no schedule", which would
+    otherwise surface as a meaningless "0" in the UI.
+    """
+    schedule_id = data.next_schedule
+    if not schedule_id:
+        return None
+    annotation = data.next_schedule_info.get("annotation_text")
+    return annotation or f"Schedule {schedule_id}"
+
+
 def _remaining(data: IMSData) -> int | None:
-    pos = data.status.get("show_playlist_position")
-    dur = data.status.get("show_playlist_duration")
+    pos = data.position_seconds
+    dur = data.duration_seconds
     if pos is None or dur is None:
         return None
     return max(int(dur) - int(pos), 0)
@@ -84,14 +97,24 @@ SENSORS: tuple[IMSSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.SECONDS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d: d.status.get("show_playlist_position"),
+        suggested_display_precision=0,
+        value_fn=lambda d: d.position_seconds,
+        attrs_fn=lambda d: {
+            "edit_units": d.status.get("show_playlist_position"),
+            "edit_rate": d.edit_rate,
+        },
     ),
     IMSSensorDescription(
         key="duration",
         translation_key="duration",
         native_unit_of_measurement=UnitOfTime.SECONDS,
         device_class=SensorDeviceClass.DURATION,
-        value_fn=lambda d: d.status.get("show_playlist_duration"),
+        suggested_display_precision=0,
+        value_fn=lambda d: d.duration_seconds,
+        attrs_fn=lambda d: {
+            "edit_units": d.status.get("show_playlist_duration"),
+            "edit_rate": d.edit_rate,
+        },
     ),
     IMSSensorDescription(
         key="remaining",
@@ -99,6 +122,7 @@ SENSORS: tuple[IMSSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.SECONDS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
         value_fn=_remaining,
     ),
     IMSSensorDescription(
@@ -134,7 +158,7 @@ SENSORS: tuple[IMSSensorDescription, ...] = (
         key="next_schedule",
         translation_key="next_schedule",
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d: d.next_schedule,
+        value_fn=_next_schedule,
         attrs_fn=lambda d: {
             "annotation": d.next_schedule_info.get("annotation_text"),
             "spl_id": d.next_schedule_info.get("spl_id"),

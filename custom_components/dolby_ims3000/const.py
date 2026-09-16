@@ -17,9 +17,15 @@ CONF_POSITION_UNIT: Final = "position_unit"
 CONF_SPL_NAMES: Final = "spl_names"
 CONF_TIMEOUT: Final = "timeout"
 
+POSITION_UNIT_AUTO: Final = "auto"
 POSITION_UNIT_SECONDS: Final = "seconds"
 POSITION_UNIT_EDIT_UNITS: Final = "edit_units"
-POSITION_UNITS: Final = [POSITION_UNIT_SECONDS, POSITION_UNIT_EDIT_UNITS]
+POSITION_UNITS: Final = [
+    POSITION_UNIT_AUTO,
+    POSITION_UNIT_SECONDS,
+    POSITION_UNIT_EDIT_UNITS,
+]
+DEFAULT_POSITION_UNIT: Final = POSITION_UNIT_AUTO
 
 # How often the slow-moving catalogue (SPL/CPL/KDM lists, product info) is
 # refreshed, in multiples of the fast poll.

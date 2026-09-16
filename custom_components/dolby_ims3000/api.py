@@ -94,8 +94,10 @@ class IMSClient:
         try:
             writer.close()
             await writer.wait_closed()
-        except (OSError, asyncio.TimeoutError):  # pragma: no cover - best effort
-            pass
+        except (OSError, asyncio.TimeoutError) as err:
+            # Closing a socket that is already gone is not worth propagating,
+            # but it should never vanish without a trace either.
+            _LOGGER.debug("Ignoring error while closing connection: %s", err)
 
     def _next_id(self) -> int:
         self._request_id = (self._request_id + 1) % 60000
@@ -123,7 +125,10 @@ class IMSClient:
         self, name: str, check_rc: bool, *args: Any, **kwargs: Any
     ) -> dict[str, Any]:
         await self.connect()
-        assert self._reader is not None and self._writer is not None
+        if self._reader is None or self._writer is None:
+            raise IMSConnectionError(
+                f"no connection to {self.host}:{self.port} after connect"
+            )
 
         frame = build_request(name, self._next_id(), *args, **kwargs)
         try:
@@ -144,8 +149,9 @@ class IMSClient:
         return result
 
     async def _read_frame(self) -> tuple[bytes, bytes]:
-        assert self._reader is not None
         reader = self._reader
+        if reader is None:
+            raise IMSConnectionError(f"no connection to {self.host}:{self.port}")
 
         header = await reader.readexactly(HEADER_LEN)
         if header != HEADER:

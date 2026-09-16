@@ -20,12 +20,7 @@ from homeassistant.util import dt as dt_util
 
 from . import IMSConfigEntry
 from .api import IMSError
-from .const import (
-    CONF_ALLOW_CONTROL,
-    CONF_POSITION_UNIT,
-    POSITION_UNIT_EDIT_UNITS,
-    POSITION_UNIT_SECONDS,
-)
+from .const import CONF_ALLOW_CONTROL
 from .coordinator import IMSCoordinator
 from .entity import IMSEntity
 
@@ -98,29 +93,13 @@ class IMSMediaPlayer(IMSEntity, MediaPlayerEntity):
     def media_content_id(self) -> str | None:
         return self.coordinator.data.status.get("current_cpl_id") or None
 
-    def _scale(self, value: int | None) -> int | None:
-        """Convert a playlist counter to seconds if it is in edit units."""
-        if value is None:
-            return None
-        unit = self.coordinator.entry.options.get(
-            CONF_POSITION_UNIT, POSITION_UNIT_SECONDS
-        )
-        if unit != POSITION_UNIT_EDIT_UNITS:
-            return int(value)
-        status = self.coordinator.data.status
-        num = status.get("current_element_edit_rate_num") or 0
-        den = status.get("current_element_edit_rate_den") or 0
-        if num and den:
-            return int(value * den / num)
-        return int(value)
-
     @property
     def media_duration(self) -> int | None:
-        return self._scale(self.coordinator.data.status.get("show_playlist_duration"))
+        return self.coordinator.data.duration_seconds
 
     @property
     def media_position(self) -> int | None:
-        return self._scale(self.coordinator.data.status.get("show_playlist_position"))
+        return self.coordinator.data.position_seconds
 
     @property
     def media_position_updated_at(self) -> datetime | None:

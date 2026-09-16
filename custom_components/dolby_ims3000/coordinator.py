@@ -15,8 +15,12 @@ from homeassistant.util import dt as dt_util
 from .api import IMSClient, IMSCommandError, IMSConnectionError
 from .const import (
     CONF_CATALOG_INTERVAL,
+    CONF_POSITION_UNIT,
     DEFAULT_CATALOG_INTERVAL,
+    DEFAULT_POSITION_UNIT,
     DOMAIN,
+    POSITION_UNIT_EDIT_UNITS,
+    POSITION_UNIT_SECONDS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,6 +32,11 @@ class IMSData:
 
     available: bool = False
     last_seen: datetime | None = None
+    # Playlist counters normalised to whole seconds, plus the edit rate they
+    # were derived from (None when the counters were already in seconds).
+    position_seconds: int | None = None
+    duration_seconds: int | None = None
+    edit_rate: float | None = None
     offline_since: datetime | None = None
     status: dict[str, Any] = field(default_factory=dict)
     product: dict[str, Any] = field(default_factory=dict)
@@ -113,6 +122,7 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
         data.last_seen = dt_util.utcnow()
         data.last_error = None
         self._ever_online = True
+        self._scale_counters(data)
 
         # Cheap per-poll extras.  Failures here must not mark the device down.
         data.scheduler_enabled = await self._try(self.client.scheduler_enabled)
@@ -132,6 +142,38 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
                 data.cpl_info[cpl_id] = info
 
         return data
+
+    def _scale_counters(self, data: IMSData) -> None:
+        """Normalise the playlist counters to seconds.
+
+        The server reports position and duration in edit units (frames), not
+        seconds, and tells us the edit rate of the element on screen.  In
+        "auto" mode we divide by that rate when the server supplies one; the
+        explicit settings exist for servers that report something else.
+        """
+        status = data.status
+        raw_pos = status.get("show_playlist_position")
+        raw_dur = status.get("show_playlist_duration")
+
+        unit = self.entry.options.get(CONF_POSITION_UNIT, DEFAULT_POSITION_UNIT)
+        num = status.get("current_element_edit_rate_num") or 0
+        den = status.get("current_element_edit_rate_den") or 0
+        rate = (num / den) if num and den else None
+
+        if unit == POSITION_UNIT_SECONDS:
+            rate = None
+        elif unit == POSITION_UNIT_EDIT_UNITS and rate is None:
+            # Told to expect frames but the server did not report a rate.
+            _LOGGER.debug("Edit units requested but no edit rate reported")
+
+        data.edit_rate = rate
+        divisor = rate if rate and rate > 1 else 1
+        data.position_seconds = (
+            int(raw_pos / divisor) if isinstance(raw_pos, (int, float)) else None
+        )
+        data.duration_seconds = (
+            int(raw_dur / divisor) if isinstance(raw_dur, (int, float)) else None
+        )
 
     def _mark_offline(self, data: IMSData, err: Exception) -> IMSData:
         """Treat an unreachable server as powered down, not as an error.
@@ -156,6 +198,9 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
         data.last_error = str(err)
         # Drop volatile state so nothing reports a frozen position or title.
         data.status = {}
+        data.position_seconds = None
+        data.duration_seconds = None
+        data.edit_rate = None
         data.scheduler_enabled = None
         data.current_schedule = None
         data.next_schedule = None

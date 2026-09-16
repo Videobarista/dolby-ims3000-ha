@@ -1,5 +1,11 @@
 # Dolby IMS3000 for Home Assistant
 
+[![Validate](https://github.com/VideoBarista/dolby-ims3000-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/VideoBarista/dolby-ims3000-ha/actions/workflows/validate.yml)
+[![CodeQL](https://github.com/VideoBarista/dolby-ims3000-ha/actions/workflows/codeql.yml/badge.svg)](https://github.com/VideoBarista/dolby-ims3000-ha/actions/workflows/codeql.yml)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
+[![GitHub release](https://img.shields.io/github/v/release/VideoBarista/dolby-ims3000-ha)](https://github.com/VideoBarista/dolby-ims3000-ha/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Home Assistant integration for Dolby (formerly Doremi) digital cinema servers, speaking the
 native KLV control protocol on TCP **11730**.
 
@@ -90,6 +96,15 @@ durations look wrong by roughly the frame rate, switch the *Playlist position un
 
 ---
 
+## Security
+
+The KLV protocol has no authentication and no encryption: anyone who can reach TCP 11730 on
+the server can control it. Keep cinema servers on a separate VLAN and never expose them to
+the internet. Playback control is off by default. See [SECURITY.md](SECURITY.md) for the
+full picture and how to report a vulnerability.
+
+---
+
 ## Verifying against your server
 
 A standalone probe ships in `tools/`. It needs nothing but Python 3 — no Home Assistant, no
@@ -99,14 +114,7 @@ dependencies — and issues **read-only commands only**.
 python3 tools/probe.py 10.0.0.50            # sweep the read-only command set
 python3 tools/probe.py 10.0.0.50 --full     # also dump per-composition and per-key detail
 python3 tools/probe.py 10.0.0.50 --command GetSPLList
-python3 tools/probe.py --list-commands      # every command this build knows
-```
-
-The offline test suite exercises framing, encoding, decoding and the client's socket handling
-against a loopback server:
-
-```bash
-python3 tools/selftest.py
+python3 tools/probe.py 10.0.0.50 --list-commands
 ```
 
 If you have hardware, the most useful things to report are: anything printed as *decode failure*
