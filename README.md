@@ -148,6 +148,15 @@ downloadable from the server's own web interface. That path is not used here yet
 
 ---
 
+## Branding
+
+Home Assistant and HACS can show an icon and logo for this integration. None ship here: the
+Dolby and Doremi marks are trademarks of their owners and this project is not affiliated with
+them. `Brand/` is an empty placeholder with the required sizes documented, for anyone who
+holds the rights to suitable artwork.
+
+---
+
 ## Credits
 
 The KLV command and response tables this implementation is built on come from
