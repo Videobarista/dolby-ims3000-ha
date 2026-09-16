@@ -1,0 +1,67 @@
+play_spl:
+  fields:
+    entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: dolby_ims3000
+    spl_id:
+      required: true
+      example: 851cc838-022e-43b7-9fee-18656bdfc995
+      selector:
+        text:
+    delay:
+      default: 5
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: s
+          mode: box
+    annotation:
+      default: Home Assistant
+      selector:
+        text:
+
+validate_cpl:
+  fields:
+    entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: dolby_ims3000
+    cpl_id:
+      required: true
+      example: 851cc838-022e-43b7-9fee-18656bdfc995
+      selector:
+        text:
+
+ingest_job:
+  fields:
+    entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: dolby_ims3000
+    xml:
+      required: true
+      selector:
+        text:
+          multiline: true
+
+raw_command:
+  fields:
+    entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: dolby_ims3000
+    command:
+      required: true
+      example: GetProductInfo
+      selector:
+        text:
+    params:
+      example: '{"uuid": "851cc838-022e-43b7-9fee-18656bdfc995"}'
+      selector:
+        object:
