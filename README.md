@@ -150,10 +150,16 @@ downloadable from the server's own web interface. That path is not used here yet
 
 ## Branding
 
-Home Assistant and HACS can show an icon and logo for this integration. None ship here: the
-Dolby and Doremi marks are trademarks of their owners and this project is not affiliated with
-them. `Brand/` is an empty placeholder with the required sizes documented, for anyone who
-holds the rights to suitable artwork.
+Home Assistant and HACS can show an icon and logo for this integration. No manufacturer
+artwork ships here: the Dolby and Doremi marks are trademarks of their owners and this
+project is not affiliated with them.
+
+`custom_components/dolby_ims3000/brand/icon.png` (and `icon@2x.png`) hold a blank placeholder
+— a plain outline square, nothing more — so HACS's brand check passes. Replace them with real
+artwork if you have the rights to some, or leave them as-is; the integration works either way.
+
+`Brand/` is a separate, empty spot with the required sizes documented for anyone who wants to
+contribute proper artwork for wider distribution.
 
 ---
 
