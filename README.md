@@ -46,6 +46,19 @@ dependencies beyond Python 3. Start with `python3 tools/probe.py <host> --list-c
 
 ---
 
+## Power-down handling
+
+Cinema servers are switched off outside show hours, including while Home Assistant itself is
+restarting — so an unreachable server is treated as a normal state, not a failure, from the
+very first poll onward. The media player reports `off`, the connectivity binary sensor goes
+off, and everything else that depends on the server clears rather than freezing on stale data.
+Setup completes normally even if the server happens to be off at the time; there is no retry
+loop and no traceback in the log, only a single INFO line when the server drops out and one
+when it returns. The `Last seen` sensor stays readable throughout, so history remains useful
+and you can automate on the server being off.
+
+---
+
 ## Installation
 
 ### HACS

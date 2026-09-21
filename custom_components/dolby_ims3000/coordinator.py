@@ -9,7 +9,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .api import IMSClient, IMSCommandError, IMSConnectionError
@@ -87,9 +87,19 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
         # SPL selected in the UI but not yet started.  Purely local state.
         self.armed_spl: str | None = None
         self._tick = 0
-        # A powered-down projection server is normal, not a failure.  Only the
-        # very first poll is allowed to hard-fail, so setup still retries.
-        self._ever_online = False
+        # The config flow already probes the host before an entry can be
+        # created or reconfigured (see _async_probe in config_flow.py), so by
+        # the time this coordinator exists the host is known to be a real
+        # IMS3000.  A connection failure here therefore always means "the
+        # server is currently unreachable" (most often: switched off outside
+        # show hours), never "this was never a valid host" - including on the
+        # very first poll after a Home Assistant restart, which is exactly
+        # when a cinema server is most likely to still be powered down.  So
+        # every connection failure is treated the same way, from the first
+        # poll onward: the entry sets up successfully and the device reports
+        # "off" instead of setup retrying with an escalating backoff and a
+        # full traceback in the log every few seconds.
+        self._first_update = True
         self._catalog_every: int = entry.options.get(
             CONF_CATALOG_INTERVAL, DEFAULT_CATALOG_INTERVAL
         )
@@ -99,6 +109,8 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
         catalogue_due = self._tick % max(self._catalog_every, 1) == 0
         self._tick += 1
 
+        is_first_update, self._first_update = self._first_update, False
+
         try:
             data.status = await self.client.status()
         except IMSCommandError as err:
@@ -106,22 +118,16 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
             data.last_error = str(err)
             _LOGGER.debug("Status command rejected: %s", err)
         except IMSConnectionError as err:
-            if not self._ever_online:
-                # Never reached it yet: let HA retry setup properly.
-                data.available = False
-                data.last_error = str(err)
-                raise UpdateFailed(str(err)) from err
-            return self._mark_offline(data, err)
+            return self._mark_offline(data, err, is_first_update)
 
         if not data.available:
             _LOGGER.info(
-                "%s is reachable again at %s", self.entry.title, self.client.host
+                "%s is reachable at %s", self.entry.title, self.client.host
             )
         data.available = True
         data.offline_since = None
         data.last_seen = dt_util.utcnow()
         data.last_error = None
-        self._ever_online = True
         self._scale_counters(data)
 
         # Cheap per-poll extras.  Failures here must not mark the device down.
@@ -175,15 +181,18 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
             int(raw_dur / divisor) if isinstance(raw_dur, (int, float)) else None
         )
 
-    def _mark_offline(self, data: IMSData, err: Exception) -> IMSData:
+    def _mark_offline(
+        self, data: IMSData, err: Exception, is_first_update: bool = False
+    ) -> IMSData:
         """Treat an unreachable server as powered down, not as an error.
 
-        Cinema servers are switched off outside show hours.  Raising
-        UpdateFailed for that fills the log with errors and drops every entity
-        to "unavailable"; instead the connectivity sensor goes off and the
-        media player reports "off".
+        Cinema servers are switched off outside show hours - including, quite
+        often, at the moment Home Assistant itself restarts.  Failing setup
+        for that would retry with an escalating backoff and a full traceback
+        in the log on every attempt; instead the config entry loads normally,
+        the connectivity sensor goes off and the media player reports "off".
         """
-        if data.available:
+        if data.available or is_first_update:
             data.offline_since = dt_util.utcnow()
             _LOGGER.info(
                 "%s is unreachable at %s, treating it as powered off (%s)",
