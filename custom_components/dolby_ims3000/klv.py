@@ -310,8 +310,14 @@ RESPONSES: tuple[Response, ...] = (
     )),
     Response("GetCPLInfo2", _k("010401"), _CPL_COMMON + (
         Field("crypto_key_id_list", 176, -55, dec_uuid_list),
-        Field("schemas", -55, -54, dec_int, {0: "Unknown", 1: "Digicine (Interop)", 2: "SMPTE"}),
-        Field("stream_type", -54, -53, dec_int, {0: "None", 1: "FTP Stream", 2: "FTP Stream + Ingest"}),
+        Field(
+            "schemas", -55, -54, dec_int,
+            {0: "Unknown", 1: "Digicine (Interop)", 2: "SMPTE"},
+        ),
+        Field(
+            "stream_type", -54, -53, dec_int,
+            {0: "None", 1: "FTP Stream", 2: "FTP Stream + Ingest"},
+        ),
         Field("complete", -53, -52, dec_int),
         Field("frame_per_edit", -52, -51, dec_int),
         Field("frame_rate_a", -49, -45, dec_int),
@@ -516,7 +522,10 @@ def parse_payload(key: bytes, payload: bytes) -> dict[str, Any]:
     result: dict[str, Any] = {"_message": definition.name}
     for field in definition.fields:
         try:
-            chunk = payload[field.start : field.end] if field.end is not None else payload[field.start :]
+            if field.end is not None:
+                chunk = payload[field.start : field.end]
+            else:
+                chunk = payload[field.start :]
             # An empty slice means the frame is shorter than this definition
             # expects.  Reporting nothing is safer than reporting a decoded
             # zero, which for return_code would look like success.

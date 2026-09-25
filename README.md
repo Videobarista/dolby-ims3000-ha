@@ -1,6 +1,8 @@
 # Dolby IMS3000 for Home Assistant
 
-[![Validate](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/validate.yml)
+[![Hassfest](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hassfest.yml/badge.svg)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hassfest.yml)
+[![HACS Validation](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hacs.yml/badge.svg)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hacs.yml)
+[![Ruff](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/ruff.yml/badge.svg)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/ruff.yml)
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Videobarista&repository=dolby-ims3000-ha&category=integration)
 [![GitHub release](https://img.shields.io/github/v/release/Videobarista/dolby-ims3000-ha)](https://github.com/Videobarista/dolby-ims3000-ha/releases)
