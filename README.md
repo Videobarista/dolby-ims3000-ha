@@ -26,6 +26,7 @@ set — if you run one of those, an issue with your results is welcome.
 | Playlist position, duration, time remaining | `sensor` | Progress through the running show |
 | Show playlists, compositions, keys | `sensor` | Library counts, with IDs and titles as attributes |
 | Next scheduled show | `sensor` | Upcoming schedule entry and its annotation |
+| Response time, last seen | `sensor` | Round-trip time of the last poll, and when the server was last reachable |
 | Serial number, software version, API version, time zone | `sensor` | Diagnostic, disabled by default |
 | Online | `binary_sensor` | Connectivity, stays available when the server is not |
 | Show running, show loaded | `binary_sensor` | Quick automation triggers |
@@ -98,9 +99,13 @@ else. When nothing is loaded, this integration falls back to queueing the armed 
 scheduler a few seconds out, which is how the scheduler is designed to be driven. If you want
 deterministic starts, let shows load via the server's own schedule and use play to release them.
 
-**Show playlists have no names.** `GetSPLList` returns bare UUIDs with no accompanying metadata,
-so the show picker labels entries by their first octets (`SPL 851cc838`). Compositions do carry
-titles, so the *current title* sensor shows something readable.
+**Show playlists have no names of their own.** `GetSPLList` returns bare UUIDs with no
+accompanying metadata — there is no command to look one up by id either. The only place a show
+name appears anywhere in the protocol is a scheduler entry's annotation text, so the show
+picker learns a name for an SPL once it has been seen as the current or next scheduled show,
+and falls back to the UUID's first octets (`SPL 851cc838`) until then. A show played by manually
+arming and pressing play, never scheduled, keeps the UUID label. Compositions do carry titles,
+so the *current title* sensor always shows something readable regardless.
 
 **Playlist counters are in edit units.** The server reports playlist position and duration in
 frames, not seconds, and separately reports the edit rate of the element on screen. The

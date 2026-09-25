@@ -110,7 +110,9 @@ class IMSMediaPlayer(IMSEntity, MediaPlayerEntity):
     # -- source (show playlist) -----------------------------------------
 
     def _label(self, spl_id: str) -> str:
-        return f"SPL {spl_id[:8]}"
+        name = self.coordinator.data.spl_names.get(spl_id)
+        short = spl_id[:8]
+        return f"{name} ({short})" if name else f"SPL {short}"
 
     @property
     def source_list(self) -> list[str]:

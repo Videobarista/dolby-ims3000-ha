@@ -121,6 +121,9 @@
       "serial_number": {
         "name": "Serial number"
       },
+      "response_time": {
+        "name": "Response time"
+      },
       "last_seen": {
         "name": "Last seen"
       }

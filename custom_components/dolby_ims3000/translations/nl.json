@@ -121,6 +121,9 @@
       "serial_number": {
         "name": "Serienummer"
       },
+      "response_time": {
+        "name": "Responstijd"
+      },
       "last_seen": {
         "name": "Laatst gezien"
       }

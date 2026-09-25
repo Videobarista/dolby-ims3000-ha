@@ -194,6 +194,16 @@ SENSORS: tuple[IMSSensorDescription, ...] = (
         value_fn=lambda d: d.product.get("product_serial"),
     ),
     IMSSensorDescription(
+        key="response_time",
+        translation_key="response_time",
+        native_unit_of_measurement=UnitOfTime.MILLISECONDS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
+        value_fn=lambda d: d.response_time_ms,
+    ),
+    IMSSensorDescription(
         key="last_seen",
         translation_key="last_seen",
         device_class=SensorDeviceClass.TIMESTAMP,

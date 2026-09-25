@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
@@ -32,6 +33,9 @@ class IMSData:
 
     available: bool = False
     last_seen: datetime | None = None
+    # Wall-clock time of the last status round trip, in milliseconds.  None
+    # while offline, since a timeout is not a response time.
+    response_time_ms: float | None = None
     # Playlist counters normalised to whole seconds, plus the edit rate they
     # were derived from (None when the counters were already in seconds).
     position_seconds: int | None = None
@@ -44,8 +48,18 @@ class IMSData:
     timezone: str | None = None
     scheduler_enabled: bool | None = None
     current_schedule: int | None = None
+    current_schedule_info: dict[str, Any] = field(default_factory=dict)
     next_schedule: int | None = None
     next_schedule_info: dict[str, Any] = field(default_factory=dict)
+    # Every schedule entry we've looked up this session, keyed by schedule id.
+    # Static once fetched (a schedule's annotation and SPL don't change), so
+    # this is a plain cache, never invalidated.
+    schedule_info: dict[int, dict[str, Any]] = field(default_factory=dict)
+    # SPL uuid -> name, learned opportunistically from schedule_info above.
+    # The protocol has no "get SPL name" command; a schedule entry's
+    # annotation_text is the only place a show name ever appears, so this
+    # fills in as shows get scheduled and observed as current or next.
+    spl_names: dict[str, str] = field(default_factory=dict)
     spl_ids: list[str] = field(default_factory=list)
     cpl_ids: list[str] = field(default_factory=list)
     kdm_ids: list[str] = field(default_factory=list)
@@ -111,14 +125,19 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
 
         is_first_update, self._first_update = self._first_update, False
 
+        poll_start = time.monotonic()
         try:
             data.status = await self.client.status()
         except IMSCommandError as err:
-            # A command-level failure still means the box is reachable.
+            # A command-level failure still means the box is reachable, and
+            # the round trip to get that rejection is a genuine response time.
+            data.response_time_ms = round((time.monotonic() - poll_start) * 1000, 1)
             data.last_error = str(err)
             _LOGGER.debug("Status command rejected: %s", err)
         except IMSConnectionError as err:
             return self._mark_offline(data, err, is_first_update)
+        else:
+            data.response_time_ms = round((time.monotonic() - poll_start) * 1000, 1)
 
         if not data.available:
             _LOGGER.info(
@@ -136,6 +155,12 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
             "GetCurrentSchedule", "schedule_id"
         )
         data.next_schedule = await self._try_field("GetNextSchedule", "schedule_id")
+        data.current_schedule_info = await self._resolve_schedule(
+            data.current_schedule, data
+        )
+        data.next_schedule_info = await self._resolve_schedule(
+            data.next_schedule, data
+        )
 
         if catalogue_due:
             await self._refresh_catalogue(data)
@@ -207,11 +232,13 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
         data.last_error = str(err)
         # Drop volatile state so nothing reports a frozen position or title.
         data.status = {}
+        data.response_time_ms = None
         data.position_seconds = None
         data.duration_seconds = None
         data.edit_rate = None
         data.scheduler_enabled = None
         data.current_schedule = None
+        data.current_schedule_info = {}
         data.next_schedule = None
         data.next_schedule_info = {}
         return data
@@ -244,11 +271,33 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
             if info:
                 data.cpl_info[cpl_id] = info
 
-        if data.next_schedule:
-            info = await self._try(
-                self.client.command, "GetScheduleInfo2", data.next_schedule
-            )
-            data.next_schedule_info = info or {}
+    async def _resolve_schedule(
+        self, schedule_id: int | None, data: IMSData
+    ) -> dict[str, Any]:
+        """Look up a schedule entry and remember its SPL's name.
+
+        Cached per schedule id: a schedule's annotation and SPL don't change
+        once created, so this only hits the network for ids not seen before -
+        in practice at most two calls per poll (current and next), and
+        usually zero once both are cached.
+        """
+        if not schedule_id:
+            return {}
+        cached = data.schedule_info.get(schedule_id)
+        if cached is not None:
+            return cached
+
+        info = (
+            await self._try(self.client.command, "GetScheduleInfo2", schedule_id)
+            or {}
+        )
+        data.schedule_info[schedule_id] = info
+
+        spl_id = info.get("spl_id")
+        name = info.get("annotation_text")
+        if spl_id and name:
+            data.spl_names[spl_id] = name
+        return info
 
     async def _try(self, func, *args: Any) -> Any:
         """Run an optional call, swallowing command-level errors."""

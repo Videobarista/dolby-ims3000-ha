@@ -27,8 +27,11 @@ class IMSShowSelect(IMSEntity, SelectEntity):
     protocol has no 'load show' verb, so arming locally and then acting is the
     only honest model.
 
-    Note the server returns show playlists as bare UUIDs with no names, so the
-    options are labelled by their first octets.
+    The server returns show playlists as bare UUIDs with no names attached.
+    The only place a show name ever appears in the protocol is a scheduler
+    entry's annotation text, so options are labelled with a name once one has
+    been seen for that SPL (via the current or next schedule slot), and fall
+    back to the UUID's first octets otherwise.
     """
 
     _attr_translation_key = "armed_show"
@@ -36,9 +39,10 @@ class IMSShowSelect(IMSEntity, SelectEntity):
     def __init__(self, coordinator: IMSCoordinator) -> None:
         super().__init__(coordinator, "armed_show")
 
-    @staticmethod
-    def _label(spl_id: str) -> str:
-        return f"SPL {spl_id[:8]}"
+    def _label(self, spl_id: str) -> str:
+        name = self.coordinator.data.spl_names.get(spl_id)
+        short = spl_id[:8]
+        return f"{name} ({short})" if name else f"SPL {short}"
 
     @property
     def options(self) -> list[str]:
@@ -59,4 +63,10 @@ class IMSShowSelect(IMSEntity, SelectEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, str | None]:
-        return {"armed_spl_id": self.coordinator.armed_spl}
+        armed = self.coordinator.armed_spl
+        return {
+            "armed_spl_id": armed,
+            "armed_show_name": self.coordinator.data.spl_names.get(armed)
+            if armed
+            else None,
+        }
