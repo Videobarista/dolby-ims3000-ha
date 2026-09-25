@@ -2,6 +2,7 @@
 
 [![Validate](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/validate.yml)
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Videobarista&repository=dolby-ims3000-ha&category=integration)
 [![GitHub release](https://img.shields.io/github/v/release/Videobarista/dolby-ims3000-ha)](https://github.com/Videobarista/dolby-ims3000-ha/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -64,7 +65,8 @@ and you can automate on the server being off.
 
 ### HACS
 
-HACS → three-dot menu → **Custom repositories** → paste this repository's URL → category
+Click the badge above the title to open this repository directly in HACS, or add it manually:
+three-dot menu → **Custom repositories** → paste this repository's URL → category
 **Integration** → install → restart Home Assistant.
 
 ### Manual
