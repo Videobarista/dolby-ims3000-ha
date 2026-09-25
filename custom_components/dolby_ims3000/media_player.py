@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from homeassistant.components.media_player import (
@@ -151,7 +151,7 @@ class IMSMediaPlayer(IMSEntity, MediaPlayerEntity):
             if state is MediaPlayerState.PAUSED:
                 await self.coordinator.client.play()
             elif self.coordinator.armed_spl:
-                start = datetime.now(timezone.utc) + timedelta(seconds=5)
+                start = datetime.now(UTC) + timedelta(seconds=5)
                 await self.coordinator.client.schedule_spl(
                     spl_id=self.coordinator.armed_spl,
                     when=start.strftime("%Y-%m-%dT%H:%M:%SZ"),

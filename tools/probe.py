@@ -79,7 +79,7 @@ async def run_one(client: IMSClient, name: str, params: dict[str, Any]) -> None:
 async def probe(args: argparse.Namespace) -> int:
     client = IMSClient(host=args.host, port=args.port, timeout=args.timeout)
 
-    print(f"# Dolby/Doremi cinema server probe")
+    print("# Dolby/Doremi cinema server probe")
     print(f"# target {args.host}:{args.port}\n")
 
     try:

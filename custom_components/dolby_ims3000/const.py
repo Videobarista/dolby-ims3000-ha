@@ -14,7 +14,6 @@ DEFAULT_TIMEOUT: Final = 10
 CONF_ALLOW_CONTROL: Final = "allow_control"
 CONF_CATALOG_INTERVAL: Final = "catalog_interval"
 CONF_POSITION_UNIT: Final = "position_unit"
-CONF_SPL_NAMES: Final = "spl_names"
 CONF_TIMEOUT: Final = "timeout"
 
 POSITION_UNIT_AUTO: Final = "auto"

@@ -80,7 +80,7 @@ class IMSClient:
             self._reader, self._writer = await asyncio.wait_for(
                 asyncio.open_connection(self.host, self.port), timeout=self.timeout
             )
-        except (OSError, asyncio.TimeoutError) as err:
+        except (OSError, TimeoutError) as err:
             self._reader = self._writer = None
             raise IMSConnectionError(
                 f"cannot connect to {self.host}:{self.port}: {err}"
@@ -94,7 +94,7 @@ class IMSClient:
         try:
             writer.close()
             await writer.wait_closed()
-        except (OSError, asyncio.TimeoutError) as err:
+        except (OSError, TimeoutError) as err:
             # Closing a socket that is already gone is not worth propagating,
             # but it should never vanish without a trace either.
             _LOGGER.debug("Ignoring error while closing connection: %s", err)
@@ -137,7 +137,7 @@ class IMSClient:
             key, payload = await asyncio.wait_for(
                 self._read_frame(), timeout=self.timeout
             )
-        except asyncio.TimeoutError as err:
+        except TimeoutError as err:
             raise IMSConnectionError(f"{name}: timed out after {self.timeout}s") from err
         except (OSError, asyncio.IncompleteReadError) as err:
             raise IMSConnectionError(f"{name}: connection lost: {err}") from err

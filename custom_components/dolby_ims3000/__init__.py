@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
@@ -121,7 +121,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
     async def handle_play_spl(call: ServiceCall) -> dict:
         coordinator = _coordinator_for(hass, call)
-        start = datetime.now(timezone.utc) + timedelta(seconds=call.data[ATTR_DELAY])
+        start = datetime.now(UTC) + timedelta(seconds=call.data[ATTR_DELAY])
         stamp = start.strftime("%Y-%m-%dT%H:%M:%SZ")
         try:
             schedule_id = await coordinator.client.schedule_spl(
@@ -136,7 +136,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
     async def handle_validate_cpl(call: ServiceCall) -> dict:
         coordinator = _coordinator_for(hass, call)
-        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         try:
             result = await coordinator.client.command(
                 "ValidateCPL",

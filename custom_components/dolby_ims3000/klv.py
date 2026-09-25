@@ -17,7 +17,8 @@ divergences from that reference are deliberate and marked ``FIXED:`` below.
 from __future__ import annotations
 
 import uuid
-from typing import Any, Callable, NamedTuple
+from collections.abc import Callable
+from typing import Any, NamedTuple
 
 # 06 0E 2B 34  SMPTE universal label
 # 02 05 01 0A  fixed-length pack, set/pack dictionary, registry v10
