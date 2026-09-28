@@ -40,12 +40,10 @@
           "allow_control": "Allow playback control",
           "scan_interval": "Poll interval",
           "catalog_interval": "Catalogue refresh (every N polls)",
-          "timeout": "Command timeout",
-          "position_unit": "Playlist position unit"
+          "timeout": "Command timeout"
         },
         "data_description": {
-          "catalog_interval": "How often the show, content and key lists are re-read. These change rarely, so a high value keeps traffic off the projection network.",
-          "position_unit": "Whether the server reports playlist position in seconds or in edit units. Unverified across firmware versions; switch this if reported durations look wrong."
+          "catalog_interval": "How often the show, content and key lists are re-read. These change rarely, so a high value keeps traffic off the projection network."
         }
       }
     }
@@ -88,6 +86,18 @@
       "current_title": {
         "name": "Current title"
       },
+      "title_timecode": {
+        "name": "Title timecode"
+      },
+      "title_position": {
+        "name": "Title position"
+      },
+      "title_duration": {
+        "name": "Title duration"
+      },
+      "title_remaining": {
+        "name": "Title time remaining"
+      },
       "position": {
         "name": "Playlist position"
       },
@@ -95,7 +105,7 @@
         "name": "Playlist duration"
       },
       "remaining": {
-        "name": "Time remaining"
+        "name": "Playlist time remaining"
       },
       "spl_count": {
         "name": "Show playlists"
@@ -126,15 +136,6 @@
       },
       "last_seen": {
         "name": "Last seen"
-      }
-    }
-  },
-  "selector": {
-    "position_unit": {
-      "options": {
-        "seconds": "Seconds",
-        "edit_units": "Edit units (convert using frame rate)",
-        "auto": "Automatic (use the edit rate the server reports)"
       }
     }
   },

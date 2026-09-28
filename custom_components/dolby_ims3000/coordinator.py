@@ -14,15 +14,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .api import IMSClient, IMSCommandError, IMSConnectionError
-from .const import (
-    CONF_CATALOG_INTERVAL,
-    CONF_POSITION_UNIT,
-    DEFAULT_CATALOG_INTERVAL,
-    DEFAULT_POSITION_UNIT,
-    DOMAIN,
-    POSITION_UNIT_EDIT_UNITS,
-    POSITION_UNIT_SECONDS,
-)
+from .const import CONF_CATALOG_INTERVAL, DEFAULT_CATALOG_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,11 +28,12 @@ class IMSData:
     # Wall-clock time of the last status round trip, in milliseconds.  None
     # while offline, since a timeout is not a response time.
     response_time_ms: float | None = None
-    # Playlist counters normalised to whole seconds, plus the edit rate they
-    # were derived from (None when the counters were already in seconds).
-    position_seconds: int | None = None
-    duration_seconds: int | None = None
-    edit_rate: float | None = None
+    # Whole seconds.  The playlist counters span the entire show playlist; the
+    # title counters cover only the composition currently on screen.
+    playlist_position: int | None = None
+    playlist_duration: int | None = None
+    title_position: int | None = None
+    title_duration: int | None = None
     offline_since: datetime | None = None
     status: dict[str, Any] = field(default_factory=dict)
     product: dict[str, Any] = field(default_factory=dict)
@@ -147,7 +140,7 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
         data.offline_since = None
         data.last_seen = dt_util.utcnow()
         data.last_error = None
-        self._scale_counters(data)
+        self._update_times(data)
 
         # Cheap per-poll extras.  Failures here must not mark the device down.
         data.scheduler_enabled = await self._try(self.client.scheduler_enabled)
@@ -174,37 +167,31 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
 
         return data
 
-    def _scale_counters(self, data: IMSData) -> None:
-        """Normalise the playlist counters to seconds.
+    @staticmethod
+    def _update_times(data: IMSData) -> None:
+        """Derive playlist and title times from the raw status.
 
-        The server reports position and duration in edit units (frames), not
-        seconds, and tells us the edit rate of the element on screen.  In
-        "auto" mode we divide by that rate when the server supplies one; the
-        explicit settings exist for servers that report something else.
+        The server reports both in whole seconds.  The show-playlist counters
+        cover the entire SPL, which may hold many films back to back; the
+        current-element counters cover only the composition on screen, which
+        is what a timecode display normally wants.
         """
+
+        def whole(value: Any) -> int | None:
+            return int(value) if isinstance(value, (int, float)) else None
+
         status = data.status
-        raw_pos = status.get("show_playlist_position")
-        raw_dur = status.get("show_playlist_duration")
+        data.playlist_position = whole(status.get("show_playlist_position"))
+        data.playlist_duration = whole(status.get("show_playlist_duration"))
 
-        unit = self.entry.options.get(CONF_POSITION_UNIT, DEFAULT_POSITION_UNIT)
-        num = status.get("current_element_edit_rate_num") or 0
-        den = status.get("current_element_edit_rate_den") or 0
-        rate = (num / den) if num and den else None
-
-        if unit == POSITION_UNIT_SECONDS:
-            rate = None
-        elif unit == POSITION_UNIT_EDIT_UNITS and rate is None:
-            # Told to expect frames but the server did not report a rate.
-            _LOGGER.debug("Edit units requested but no edit rate reported")
-
-        data.edit_rate = rate
-        divisor = rate if rate and rate > 1 else 1
-        data.position_seconds = (
-            int(raw_pos / divisor) if isinstance(raw_pos, (int, float)) else None
-        )
-        data.duration_seconds = (
-            int(raw_dur / divisor) if isinstance(raw_dur, (int, float)) else None
-        )
+        title_duration = whole(status.get("current_element_duration"))
+        if title_duration:
+            data.title_duration = title_duration
+            data.title_position = whole(status.get("current_element_position"))
+        else:
+            # Nothing loaded, or an element without a length (a macro cue).
+            data.title_duration = None
+            data.title_position = None
 
     def _mark_offline(
         self, data: IMSData, err: Exception, is_first_update: bool = False
@@ -233,9 +220,10 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
         # Drop volatile state so nothing reports a frozen position or title.
         data.status = {}
         data.response_time_ms = None
-        data.position_seconds = None
-        data.duration_seconds = None
-        data.edit_rate = None
+        data.playlist_position = None
+        data.playlist_duration = None
+        data.title_position = None
+        data.title_duration = None
         data.scheduler_enabled = None
         data.current_schedule = None
         data.current_schedule_info = {}

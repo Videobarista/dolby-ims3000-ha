@@ -19,25 +19,19 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
 )
 
 from .api import IMSClient, IMSConnectionError, IMSError
 from .const import (
     CONF_ALLOW_CONTROL,
     CONF_CATALOG_INTERVAL,
-    CONF_POSITION_UNIT,
     CONF_TIMEOUT,
     DEFAULT_CATALOG_INTERVAL,
     DEFAULT_NAME,
     DEFAULT_PORT,
-    DEFAULT_POSITION_UNIT,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DOMAIN,
-    POSITION_UNITS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -106,7 +100,6 @@ class DolbyIMS3000ConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
                         CONF_CATALOG_INTERVAL: DEFAULT_CATALOG_INTERVAL,
                         CONF_TIMEOUT: DEFAULT_TIMEOUT,
-                        CONF_POSITION_UNIT: DEFAULT_POSITION_UNIT,
                     },
                 )
 
@@ -200,16 +193,6 @@ class DolbyIMS3000OptionsFlow(OptionsFlow):
                     NumberSelectorConfig(
                         min=1, max=60, step=1, mode=NumberSelectorMode.BOX,
                         unit_of_measurement="s",
-                    )
-                ),
-                vol.Required(
-                    CONF_POSITION_UNIT,
-                    default=options.get(CONF_POSITION_UNIT, DEFAULT_POSITION_UNIT),
-                ): SelectSelector(
-                    SelectSelectorConfig(
-                        options=POSITION_UNITS,
-                        mode=SelectSelectorMode.DROPDOWN,
-                        translation_key="position_unit",
                     )
                 ),
             }

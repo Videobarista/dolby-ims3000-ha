@@ -93,13 +93,16 @@ class IMSMediaPlayer(IMSEntity, MediaPlayerEntity):
     def media_content_id(self) -> str | None:
         return self.coordinator.data.status.get("current_cpl_id") or None
 
+    # Position and duration describe the composition on screen, not the whole
+    # show playlist, so the progress bar and timecode match the film itself.
+    # The playlist-wide values are exposed as attributes and sensors.
     @property
     def media_duration(self) -> int | None:
-        return self.coordinator.data.duration_seconds
+        return self.coordinator.data.title_duration
 
     @property
     def media_position(self) -> int | None:
-        return self.coordinator.data.position_seconds
+        return self.coordinator.data.title_position
 
     @property
     def media_position_updated_at(self) -> datetime | None:
@@ -182,8 +185,11 @@ class IMSMediaPlayer(IMSEntity, MediaPlayerEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        status = self.coordinator.data.status
+        data = self.coordinator.data
+        status = data.status
         return {
+            "playlist_position": data.playlist_position,
+            "playlist_duration": data.playlist_duration,
             "spl_id": status.get("spl_id") or None,
             "armed_spl_id": self.coordinator.armed_spl,
             "current_cpl_id": status.get("current_cpl_id") or None,

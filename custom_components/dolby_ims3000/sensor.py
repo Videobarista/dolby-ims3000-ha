@@ -44,12 +44,42 @@ def _next_schedule(data: IMSData) -> str | None:
     return annotation or f"Schedule {schedule_id}"
 
 
-def _remaining(data: IMSData) -> int | None:
-    pos = data.position_seconds
-    dur = data.duration_seconds
-    if pos is None or dur is None:
+def _left(position: int | None, duration: int | None) -> int | None:
+    if position is None or duration is None:
         return None
-    return max(int(dur) - int(pos), 0)
+    return max(duration - position, 0)
+
+
+def _timecode(seconds: int | None) -> str | None:
+    """Format whole seconds as HH:MM:SS, the way the server's own UI does."""
+    if seconds is None:
+        return None
+    hours, rest = divmod(int(seconds), 3600)
+    minutes, secs = divmod(rest, 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+
+def _title_timecode(data: IMSData) -> str | None:
+    """Position of the current title out of its length, e.g. 01:25:24 / 01:25:38."""
+    position = _timecode(data.title_position)
+    duration = _timecode(data.title_duration)
+    if position is None or duration is None:
+        return None
+    return f"{position} / {duration}"
+
+
+def _title_timecode_attrs(data: IMSData) -> dict[str, str | None]:
+    playlist_position = _timecode(data.playlist_position)
+    playlist_duration = _timecode(data.playlist_duration)
+    playlist = None
+    if playlist_position is not None and playlist_duration is not None:
+        playlist = f"{playlist_position} / {playlist_duration}"
+    return {
+        "position": _timecode(data.title_position),
+        "duration": _timecode(data.title_duration),
+        "remaining": _timecode(_left(data.title_position, data.title_duration)),
+        "playlist": playlist,
+    }
 
 
 def _sw_version(data: IMSData) -> str | None:
@@ -92,17 +122,45 @@ SENSORS: tuple[IMSSensorDescription, ...] = (
         },
     ),
     IMSSensorDescription(
+        key="title_timecode",
+        translation_key="title_timecode",
+        value_fn=_title_timecode,
+        attrs_fn=_title_timecode_attrs,
+    ),
+    IMSSensorDescription(
+        key="title_position",
+        translation_key="title_position",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=lambda d: d.title_position,
+    ),
+    IMSSensorDescription(
+        key="title_duration",
+        translation_key="title_duration",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        device_class=SensorDeviceClass.DURATION,
+        suggested_display_precision=0,
+        value_fn=lambda d: d.title_duration,
+    ),
+    IMSSensorDescription(
+        key="title_remaining",
+        translation_key="title_remaining",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=lambda d: _left(d.title_position, d.title_duration),
+    ),
+    IMSSensorDescription(
         key="position",
         translation_key="position",
         native_unit_of_measurement=UnitOfTime.SECONDS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=lambda d: d.position_seconds,
-        attrs_fn=lambda d: {
-            "edit_units": d.status.get("show_playlist_position"),
-            "edit_rate": d.edit_rate,
-        },
+        value_fn=lambda d: d.playlist_position,
     ),
     IMSSensorDescription(
         key="duration",
@@ -110,11 +168,7 @@ SENSORS: tuple[IMSSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.SECONDS,
         device_class=SensorDeviceClass.DURATION,
         suggested_display_precision=0,
-        value_fn=lambda d: d.duration_seconds,
-        attrs_fn=lambda d: {
-            "edit_units": d.status.get("show_playlist_duration"),
-            "edit_rate": d.edit_rate,
-        },
+        value_fn=lambda d: d.playlist_duration,
     ),
     IMSSensorDescription(
         key="remaining",
@@ -123,7 +177,7 @@ SENSORS: tuple[IMSSensorDescription, ...] = (
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=_remaining,
+        value_fn=lambda d: _left(d.playlist_position, d.playlist_duration),
     ),
     IMSSensorDescription(
         key="spl_count",

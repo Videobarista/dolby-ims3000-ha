@@ -1,8 +1,8 @@
 # Dolby IMS3000 for Home Assistant
 
-[![Hassfest](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hassfest.yml/badge.svg)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hassfest.yml)
-[![HACS Validation](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hacs.yml/badge.svg)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hacs.yml)
-[![Ruff](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/ruff.yml/badge.svg)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/ruff.yml)
+[![Hassfest](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hassfest.yml/badge.svg?branch=main)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hassfest.yml)
+[![HACS Validation](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hacs.yml/badge.svg?branch=main)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hacs.yml)
+[![Ruff](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/ruff.yml/badge.svg?branch=main)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/ruff.yml)
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Videobarista&repository=dolby-ims3000-ha&category=integration)
 [![GitHub release](https://img.shields.io/github/v/release/Videobarista/dolby-ims3000-ha)](https://github.com/Videobarista/dolby-ims3000-ha/releases)
@@ -21,12 +21,14 @@ set — if you run one of those, an issue with your results is welcome.
 
 | Entity | Type | What it does |
 |---|---|---|
-| Media player | `media_player` | Playback state, current title, position/duration, play, pause, show selection |
+| Media player | `media_player` | Playback state, current title, position/duration of that title, play, pause, show selection |
 | Scheduler | `switch` | Enables or disables the server's automatic show scheduler |
 | Armed show | `select` | Picks which show playlist play actions will target |
 | Playback state | `sensor` | Stopped / playing / paused |
 | Current title | `sensor` | Content title of the composition on screen |
-| Playlist position, duration, time remaining | `sensor` | Progress through the running show |
+| Title timecode | `sensor` | Position in the current title, e.g. `01:25:24 / 01:25:38`, with remaining time and the playlist timecode as attributes |
+| Title position, duration, time remaining | `sensor` | Progress through the composition on screen, in seconds |
+| Playlist position, duration, time remaining | `sensor` | Progress through the whole show playlist, which can span many films, in seconds |
 | Show playlists, compositions, keys | `sensor` | Library counts, with IDs and titles as attributes |
 | Next scheduled show | `sensor` | Upcoming schedule entry and its annotation |
 | Response time, last seen | `sensor` | Round-trip time of the last poll, and when the server was last reachable |
@@ -111,10 +113,13 @@ and falls back to the UUID's first octets (`SPL 851cc838`) until then. A show pl
 arming and pressing play, never scheduled, keeps the UUID label. Compositions do carry titles,
 so the *current title* sensor always shows something readable regardless.
 
-**Playlist counters are in edit units.** The server reports playlist position and duration in
-frames, not seconds, and separately reports the edit rate of the element on screen. The
-integration converts using that rate by default. If your server behaves differently, the
-*Playlist position unit* option can force seconds or edit units.
+**Two sets of counters.** The server reports whole seconds twice: once across the entire show
+playlist, which can hold many films back to back, and once for the composition currently on
+screen. The media player and the *Title* sensors use the latter, the *Playlist* sensors the
+former.
+
+**There is no seek.** The message set has no cue, skip or seek command, so the media player
+cannot jump to a position and its progress bar is read-only.
 
 ---
 
