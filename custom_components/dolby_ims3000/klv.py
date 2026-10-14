@@ -16,9 +16,12 @@ divergences from that reference are deliberate and marked ``FIXED:`` below.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Callable
 from typing import Any, NamedTuple
+
+_LOGGER = logging.getLogger(__name__)
 
 # 06 0E 2B 34  SMPTE universal label
 # 02 05 01 0A  fixed-length pack, set/pack dictionary, registry v10
@@ -533,7 +536,8 @@ def parse_payload(key: bytes, payload: bytes) -> dict[str, Any]:
             if not chunk:
                 continue
             value = field.decode(chunk)
-        except Exception:  # noqa: BLE001 - a short frame should not kill the poll
+        except Exception as err:  # noqa: BLE001 - a short frame should not kill the poll
+            _LOGGER.debug("%s: could not decode %s: %s", definition.name, field.name, err)
             continue
         result[field.name] = value
         if field.lookup is not None and isinstance(value, int):

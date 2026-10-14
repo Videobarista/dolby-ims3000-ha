@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -19,6 +20,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import IMSConfigEntry
 from .coordinator import IMSCoordinator, IMSData
 from .entity import IMSEntity
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -298,7 +301,8 @@ class IMSSensor(IMSEntity, SensorEntity):
     def native_value(self) -> Any:
         try:
             return self.entity_description.value_fn(self.coordinator.data)
-        except Exception:  # noqa: BLE001 - a missing field is not an error
+        except Exception as err:  # noqa: BLE001 - a missing field is not an error
+            _LOGGER.debug("Could not derive %s: %s", self.entity_description.key, err)
             return None
 
     @property
@@ -313,5 +317,8 @@ class IMSSensor(IMSEntity, SensorEntity):
                 ).items()
                 if v is not None
             }
-        except Exception:  # noqa: BLE001
+        except Exception as err:  # noqa: BLE001 - attributes are best effort
+            _LOGGER.debug(
+                "Could not derive attributes for %s: %s", self.entity_description.key, err
+            )
             return None

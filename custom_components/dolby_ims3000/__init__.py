@@ -6,11 +6,12 @@ import logging
 from datetime import UTC, datetime, timedelta
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.typing import ConfigType
 
 from .api import IMSClient, IMSError
 from .const import (
@@ -46,6 +47,9 @@ PLATFORMS: list[Platform] = [
 # Runtime data is the coordinator; see async_setup_entry.
 IMSConfigEntry = ConfigEntry[IMSCoordinator]
 
+# Set up from the UI only; there is no YAML configuration.
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 _ENTRY_SELECTOR = {vol.Required("entry_id"): cv.string}
 
 PLAY_SPL_SCHEMA = vol.Schema(
@@ -72,6 +76,12 @@ RAW_COMMAND_SCHEMA = vol.Schema(
 )
 
 
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the domain actions once, independent of any config entry."""
+    _async_register_services(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: IMSConfigEntry) -> bool:
     """Set up a configured server."""
     client = IMSClient(
@@ -93,7 +103,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: IMSConfigEntry) -> bool:
     entry.async_on_unload(client.disconnect)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    _async_register_services(hass)
     return True
 
 
@@ -109,15 +118,15 @@ async def _async_reload_entry(hass: HomeAssistant, entry: IMSConfigEntry) -> Non
 def _coordinator_for(hass: HomeAssistant, call: ServiceCall) -> IMSCoordinator:
     entry_id = call.data["entry_id"]
     entry: IMSConfigEntry | None = hass.config_entries.async_get_entry(entry_id)
-    if entry is None or entry.domain != DOMAIN or not hasattr(entry, "runtime_data"):
-        raise HomeAssistantError(f"No loaded Dolby IMS3000 entry with id {entry_id}")
+    if entry is None or entry.domain != DOMAIN:
+        raise ServiceValidationError(f"No Dolby IMS3000 entry with id {entry_id}")
+    if entry.state is not ConfigEntryState.LOADED:
+        raise ServiceValidationError(f"Dolby IMS3000 entry {entry.title} is not loaded")
     return entry.runtime_data
 
 
 def _async_register_services(hass: HomeAssistant) -> None:
-    """Register the domain services once."""
-    if hass.services.has_service(DOMAIN, SERVICE_PLAY_SPL):
-        return
+    """Register the domain actions."""
 
     async def handle_play_spl(call: ServiceCall) -> dict:
         coordinator = _coordinator_for(hass, call)

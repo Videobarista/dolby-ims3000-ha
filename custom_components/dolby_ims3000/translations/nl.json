@@ -11,7 +11,10 @@
           "allow_control": "Afspeelbesturing toestaan"
         },
         "data_description": {
-          "allow_control": "Laat uit voor alleen uitlezen. Staat dit uit, dan worden play, pause en wijzigingen aan de planner geweigerd."
+          "allow_control": "Laat uit voor alleen uitlezen. Staat dit uit, dan worden play, pause en wijzigingen aan de planner geweigerd.",
+          "host": "IP-adres of hostnaam van het media block.",
+          "port": "KLV-besturingspoort. Laat op 11730 staan, tenzij de server anders is ingesteld.",
+          "name": "Naam voor deze server in Home Assistant."
         }
       },
       "reconfigure": {
@@ -19,6 +22,10 @@
         "data": {
           "host": "Host",
           "port": "Poort"
+        },
+        "data_description": {
+          "host": "IP-adres of hostnaam van het media block.",
+          "port": "KLV-besturingspoort. Laat op 11730 staan, tenzij de server anders is ingesteld."
         }
       }
     },
@@ -43,7 +50,10 @@
           "timeout": "Commando-timeout"
         },
         "data_description": {
-          "catalog_interval": "Hoe vaak de shows-, content- en sleutellijsten opnieuw worden gelezen. Deze veranderen zelden, dus een hoge waarde houdt verkeer van het projectienetwerk af."
+          "catalog_interval": "Hoe vaak de shows-, content- en sleutellijsten opnieuw worden gelezen. Deze veranderen zelden, dus een hoge waarde houdt verkeer van het projectienetwerk af.",
+          "allow_control": "Uit: afspelen, pauzeren en scheduler-wijzigingen worden geweigerd.",
+          "scan_interval": "Hoe vaak de afspeelstatus wordt uitgelezen, in seconden.",
+          "timeout": "Hoe lang er op een antwoord van de server op één commando wordt gewacht."
         }
       }
     }

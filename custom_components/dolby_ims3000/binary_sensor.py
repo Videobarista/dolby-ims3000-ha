@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -17,6 +18,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import IMSConfigEntry
 from .coordinator import IMSCoordinator, IMSData
 from .entity import IMSEntity
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -93,5 +96,6 @@ class IMSBinarySensor(IMSEntity, BinarySensorEntity):
     def is_on(self) -> bool | None:
         try:
             return self.entity_description.value_fn(self.coordinator.data)
-        except Exception:  # noqa: BLE001
+        except Exception as err:  # noqa: BLE001 - a missing field is not an error
+            _LOGGER.debug("Could not derive %s: %s", self.entity_description.key, err)
             return None

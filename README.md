@@ -3,10 +3,12 @@
 [![Hassfest](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hassfest.yml/badge.svg?branch=main)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hassfest.yml)
 [![HACS Validation](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hacs.yml/badge.svg?branch=main)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/hacs.yml)
 [![Ruff](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/ruff.yml/badge.svg?branch=main)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/ruff.yml)
+[![Tests](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Videobarista/dolby-ims3000-ha/actions/workflows/tests.yml)
+[![Quality scale: Bronze aligned](https://img.shields.io/badge/quality%20scale-bronze%20aligned-cd7f32.svg)](#quality-scale)
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Videobarista&repository=dolby-ims3000-ha&category=integration)
 [![GitHub release](https://img.shields.io/github/v/release/Videobarista/dolby-ims3000-ha)](https://github.com/Videobarista/dolby-ims3000-ha/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Videobarista&repository=dolby-ims3000-ha&category=integration)
 
 Home Assistant integration for Dolby (formerly Doremi) digital cinema servers, speaking the
 native KLV control protocol on TCP **11730**.
@@ -69,7 +71,8 @@ and you can automate on the server being off.
 
 ### HACS
 
-Click the badge above the title to open this repository directly in HACS, or add it manually:
+Click the **Open in HACS** badge at the top of this page to open the repository directly in
+HACS, or add it manually:
 three-dot menu → **Custom repositories** → paste this repository's URL → category
 **Integration** → install → restart Home Assistant.
 
@@ -87,6 +90,17 @@ Everything else lives in the integration's **Configure** dialog afterwards.
 
 The KLV port requires no authentication — access is controlled by network reachability. Keep
 your projection network segmented.
+
+### Removal
+
+1. Settings → Devices & Services → *Dolby IMS3000* → three-dot menu on the server →
+   **Delete**. Repeat for every server you added.
+2. If you installed through HACS: HACS → *Dolby IMS3000* → three-dot menu → **Remove**.
+   For a manual install, delete `config/custom_components/dolby_ims3000`.
+3. Restart Home Assistant.
+
+Removing the integration changes nothing on the server itself: schedules and show playlists
+created through it stay on the IMS3000.
 
 ---
 
@@ -120,6 +134,25 @@ former.
 
 **There is no seek.** The message set has no cue, skip or seek command, so the media player
 cannot jump to a position and its progress bar is read-only.
+
+---
+
+## Quality scale
+
+This integration is aligned with the
+[Home Assistant integration quality scale](https://developers.home-assistant.io/docs/core/integration-quality-scale/):
+**Bronze**. Home Assistant only grades its own core integrations, so this is not an official
+rating. The rules and their status are listed in
+[`quality_scale.yaml`](custom_components/dolby_ims3000/quality_scale.yaml).
+
+Two rules are exempt. *Test before setup* deliberately does not fail setup when the server is
+unreachable, because cinema servers are routinely switched off when Home Assistant starts; the
+config flow verifies the host instead. *Entity event setup* does not apply, as the entities only
+read polled data.
+
+The test suite covers the config, reconfigure and options flows, setup and unload, and setup
+while the server is switched off. Run it with `pip install -r requirements_test.txt` followed by
+`pytest`.
 
 ---
 
@@ -177,16 +210,13 @@ downloadable from the server's own web interface. That path is not used here yet
 
 ## Branding
 
-Home Assistant and HACS can show an icon and logo for this integration. No manufacturer
-artwork ships here: the Dolby and Doremi marks are trademarks of their owners and this
-project is not affiliated with them.
+The icon and logo are a generic cinema-server mark drawn for this project — a server chassis
+with a film strip and a play button. No manufacturer artwork ships here: the Dolby and Doremi
+marks are trademarks of their owners and this project is not affiliated with them.
 
-`custom_components/dolby_ims3000/brand/icon.png` (and `icon@2x.png`) hold a blank placeholder
-— a plain outline square, nothing more — so HACS's brand check passes. Replace them with real
-artwork if you have the rights to some, or leave them as-is; the integration works either way.
-
-`Brand/` is a separate, empty spot with the required sizes documented for anyone who wants to
-contribute proper artwork for wider distribution.
+Home Assistant loads the copies in `custom_components/dolby_ims3000/brand/`. The same files sit
+in `Brand/` with their sizes documented, so you can swap in your own artwork, or official logos
+if you hold the rights to use them.
 
 ---
 

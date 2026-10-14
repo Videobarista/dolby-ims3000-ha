@@ -125,6 +125,13 @@ class DolbyIMS3000ConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except IMSError:
                 errors["base"] = "invalid_response"
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception(
+                    "Unexpected error probing %s:%s",
+                    user_input[CONF_HOST],
+                    user_input[CONF_PORT],
+                )
+                errors["base"] = "unknown"
             else:
                 return self.async_update_reload_and_abort(
                     entry,
