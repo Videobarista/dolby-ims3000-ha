@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 import voluptuous as vol
+
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -24,6 +25,7 @@ from homeassistant.helpers.selector import (
 from .api import IMSClient, IMSConnectionError, IMSError
 from .const import (
     CONF_ALLOW_CONTROL,
+    CONF_ALLOW_DELETE,
     CONF_CATALOG_INTERVAL,
     CONF_TIMEOUT,
     DEFAULT_CATALOG_INTERVAL,
@@ -41,7 +43,9 @@ STEP_USER_SCHEMA = vol.Schema(
         vol.Required(CONF_HOST): cv.string,
         vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Optional(CONF_ALLOW_CONTROL, default=True): cv.boolean,
+        # Off by default: a new server starts as monitoring only, and control
+        # is something the user switches on deliberately.
+        vol.Optional(CONF_ALLOW_CONTROL, default=False): cv.boolean,
     }
 )
 
@@ -97,6 +101,7 @@ class DolbyIMS3000ConfigFlow(ConfigFlow, domain=DOMAIN):
                     data={CONF_HOST: host, CONF_PORT: port},
                     options={
                         CONF_ALLOW_CONTROL: user_input[CONF_ALLOW_CONTROL],
+                        CONF_ALLOW_DELETE: False,
                         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
                         CONF_CATALOG_INTERVAL: DEFAULT_CATALOG_INTERVAL,
                         CONF_TIMEOUT: DEFAULT_TIMEOUT,
@@ -175,6 +180,10 @@ class DolbyIMS3000OptionsFlow(OptionsFlow):
                 vol.Required(
                     CONF_ALLOW_CONTROL,
                     default=options.get(CONF_ALLOW_CONTROL, True),
+                ): cv.boolean,
+                vol.Required(
+                    CONF_ALLOW_DELETE,
+                    default=options.get(CONF_ALLOW_DELETE, False),
                 ): cv.boolean,
                 vol.Required(
                     CONF_SCAN_INTERVAL,

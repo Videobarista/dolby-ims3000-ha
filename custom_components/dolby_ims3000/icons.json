@@ -1,0 +1,9 @@
+{
+  "entity": {
+    "button": {
+      "delete_current_cpl": {
+        "default": "mdi:delete-forever"
+      }
+    }
+  }
+}

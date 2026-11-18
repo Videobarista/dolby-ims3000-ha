@@ -7,15 +7,16 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.dolby_ims3000.const import (
     CONF_ALLOW_CONTROL,
+    CONF_ALLOW_DELETE,
     CONF_CATALOG_INTERVAL,
     CONF_TIMEOUT,
     DOMAIN,
 )
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL
 
 from .const import (
     COMMAND_REPLIES,
@@ -54,6 +55,7 @@ def _make_client() -> MagicMock:
     client.play = AsyncMock(return_value={})
     client.pause = AsyncMock(return_value={})
     client.schedule_spl = AsyncMock(return_value=42)
+    client.delete_cpl = AsyncMock(return_value={"return_code": 0})
     client.disconnect = AsyncMock()
     return client
 
@@ -73,6 +75,41 @@ def mock_config_entry() -> MockConfigEntry:
         data={CONF_HOST: HOST, CONF_PORT: PORT},
         options={
             CONF_ALLOW_CONTROL: True,
+            CONF_SCAN_INTERVAL: 10,
+            CONF_CATALOG_INTERVAL: 30,
+            CONF_TIMEOUT: 10,
+        },
+    )
+
+
+@pytest.fixture
+def read_only_config_entry() -> MockConfigEntry:
+    """A configured server with playback control switched off."""
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title="Dolby IMS3000",
+        unique_id=SERIAL,
+        data={CONF_HOST: HOST, CONF_PORT: PORT},
+        options={
+            CONF_ALLOW_CONTROL: False,
+            CONF_SCAN_INTERVAL: 10,
+            CONF_CATALOG_INTERVAL: 30,
+            CONF_TIMEOUT: 10,
+        },
+    )
+
+
+@pytest.fixture
+def delete_config_entry() -> MockConfigEntry:
+    """A configured server with deleting content allowed."""
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title="Dolby IMS3000",
+        unique_id=SERIAL,
+        data={CONF_HOST: HOST, CONF_PORT: PORT},
+        options={
+            CONF_ALLOW_CONTROL: True,
+            CONF_ALLOW_DELETE: True,
             CONF_SCAN_INTERVAL: 10,
             CONF_CATALOG_INTERVAL: 30,
             CONF_TIMEOUT: 10,

@@ -12,8 +12,10 @@ from .klv import (
     ID_LEN,
     KEY_LEN,
     ProtocolError,
-    build_request,
     decode_ber,
+    encode_request,
+    expected_response_key,
+    frame_request,
     parse_payload,
 )
 
@@ -34,14 +36,33 @@ class IMSConnectionError(IMSError):
     """Socket could not be opened or was lost mid-exchange."""
 
 
+class IMSInvalidRequest(IMSError):
+    """A command or one of its values was rejected before anything was sent."""
+
+
 class IMSCommandError(IMSError):
     """The server answered, but with a non-zero return code."""
 
-    def __init__(self, command: str, return_code: int, payload: dict[str, Any]) -> None:
-        super().__init__(f"{command} failed with return code {return_code}")
+    def __init__(
+        self,
+        command: str,
+        return_code: int,
+        payload: dict[str, Any],
+        message: str | None = None,
+    ) -> None:
+        super().__init__(message or f"{command} failed with return code {return_code}")
         self.command = command
         self.return_code = return_code
         self.payload = payload
+
+
+class IMSUnexpectedResponse(IMSCommandError):
+    """The server answered with a different message than the one asked for.
+
+    The frame itself was read completely, so the stream is still in step and
+    the connection is kept.  Callers that fall back to an older command on
+    IMSCommandError (StatusSPL2 -> StatusSPL) do the same here.
+    """
 
 
 class IMSClient:
@@ -105,16 +126,24 @@ class IMSClient:
 
     # -- exchange --------------------------------------------------------
 
-    async def command(self, name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
+    async def command(self, name: str, /, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Send a request and return the parsed response.
 
-        Raises IMSConnectionError on transport trouble and IMSCommandError when
-        the server reports a non-zero return code.
+        Raises IMSInvalidRequest for bad input (nothing is sent),
+        IMSConnectionError on transport trouble and IMSCommandError when the
+        server reports a non-zero return code or answers with another message.
         """
         check_rc = kwargs.pop("_check_return_code", True)
+        # Encode first: a bad value is the caller's mistake, not a broken
+        # stream, so it must not cost a perfectly good connection.
+        try:
+            key, encoded = encode_request(name, *args, **kwargs)
+        except ProtocolError as err:
+            raise IMSInvalidRequest(str(err)) from err
+
         async with self._lock:
             try:
-                return await self._exchange(name, check_rc, *args, **kwargs)
+                return await self._exchange(name, key, encoded, check_rc)
             except (IMSConnectionError, ProtocolError):
                 # A desynchronised stream can never recover; drop it so the next
                 # call starts from a clean socket.
@@ -122,7 +151,7 @@ class IMSClient:
                 raise
 
     async def _exchange(
-        self, name: str, check_rc: bool, *args: Any, **kwargs: Any
+        self, name: str, key: bytes, encoded: bytes, check_rc: bool
     ) -> dict[str, Any]:
         await self.connect()
         if self._reader is None or self._writer is None:
@@ -130,11 +159,12 @@ class IMSClient:
                 f"no connection to {self.host}:{self.port} after connect"
             )
 
-        frame = build_request(name, self._next_id(), *args, **kwargs)
+        request_id = self._next_id()
+        frame = frame_request(key, request_id, encoded)
         try:
             self._writer.write(frame)
             await asyncio.wait_for(self._writer.drain(), timeout=self.timeout)
-            key, payload = await asyncio.wait_for(
+            reply_key, reply_id, payload = await asyncio.wait_for(
                 self._read_frame(), timeout=self.timeout
             )
         except TimeoutError as err:
@@ -142,13 +172,31 @@ class IMSClient:
         except (OSError, asyncio.IncompleteReadError) as err:
             raise IMSConnectionError(f"{name}: connection lost: {err}") from err
 
-        result = parse_payload(key, payload)
+        if reply_id not in (request_id, 0):
+            # Whether every firmware echoes the request id is not documented,
+            # so a mismatch is logged rather than treated as fatal.  Requests
+            # are strictly sequential and a timeout drops the socket, so a stale
+            # reply cannot be read here in the first place.
+            _LOGGER.debug(
+                "%s: reply carries request id %s, sent %s", name, reply_id, request_id
+            )
+
+        result = parse_payload(reply_key, payload)
+        expected = expected_response_key(name)
+        if expected is not None and reply_key != expected:
+            raise IMSUnexpectedResponse(
+                name,
+                -1,
+                result,
+                f"{name}: server answered with message {reply_key.hex()}, "
+                f"expected {expected.hex()}",
+            )
         rc = result.get("return_code")
         if check_rc and isinstance(rc, int) and rc != 0:
             raise IMSCommandError(name, rc, result)
         return result
 
-    async def _read_frame(self) -> tuple[bytes, bytes]:
+    async def _read_frame(self) -> tuple[bytes, int, bytes]:
         reader = self._reader
         if reader is None:
             raise IMSConnectionError(f"no connection to {self.host}:{self.port}")
@@ -170,7 +218,7 @@ class IMSClient:
             raise ProtocolError(f"implausible payload length {length}")
 
         body = await reader.readexactly(length)
-        return key, body[ID_LEN:]
+        return key, int.from_bytes(body[:ID_LEN], "big"), body[ID_LEN:]
 
     # -- convenience wrappers -------------------------------------------
 
@@ -206,6 +254,10 @@ class IMSClient:
 
     async def kdm_list(self) -> list[str]:
         return list((await self.command("GetKDMList")).get("list", []))
+
+    async def delete_cpl(self, cpl_uuid: str) -> dict[str, Any]:
+        """Delete a composition from the server.  This cannot be undone."""
+        return await self.command("DeleteCPL", uuid=cpl_uuid)
 
     async def cpl_info(self, cpl_uuid: str) -> dict[str, Any]:
         try:

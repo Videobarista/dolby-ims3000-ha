@@ -12,6 +12,7 @@ DEFAULT_SCAN_INTERVAL: Final = 10
 DEFAULT_TIMEOUT: Final = 10
 
 CONF_ALLOW_CONTROL: Final = "allow_control"
+CONF_ALLOW_DELETE: Final = "allow_delete"
 CONF_CATALOG_INTERVAL: Final = "catalog_interval"
 CONF_TIMEOUT: Final = "timeout"
 

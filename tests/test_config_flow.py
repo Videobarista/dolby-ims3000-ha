@@ -6,19 +6,20 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from homeassistant.config_entries import SOURCE_RECONFIGURE, SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.dolby_ims3000.api import IMSConnectionError, IMSError
 from custom_components.dolby_ims3000.const import (
     CONF_ALLOW_CONTROL,
+    CONF_ALLOW_DELETE,
     CONF_CATALOG_INTERVAL,
     CONF_TIMEOUT,
     DOMAIN,
 )
+from homeassistant.config_entries import SOURCE_RECONFIGURE, SOURCE_USER
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 
 from .const import HOST, PORT, PRODUCT_INFO, SERIAL
 
@@ -54,6 +55,7 @@ async def test_user_flow(hass: HomeAssistant, mock_flow_client: MagicMock) -> No
     assert result["title"] == "Screen 1"
     assert result["data"] == {CONF_HOST: HOST, CONF_PORT: PORT}
     assert result["options"][CONF_ALLOW_CONTROL] is True
+    assert result["options"][CONF_ALLOW_DELETE] is False
     assert result["result"].unique_id == SERIAL
     mock_flow_client.disconnect.assert_awaited()
 
@@ -212,6 +214,7 @@ async def test_options_flow(
         result["flow_id"],
         user_input={
             CONF_ALLOW_CONTROL: False,
+            CONF_ALLOW_DELETE: True,
             CONF_SCAN_INTERVAL: 15,
             CONF_CATALOG_INTERVAL: 60,
             CONF_TIMEOUT: 5,
@@ -220,6 +223,7 @@ async def test_options_flow(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert mock_config_entry.options[CONF_ALLOW_CONTROL] is False
+    assert mock_config_entry.options[CONF_ALLOW_DELETE] is True
     assert mock_config_entry.options[CONF_SCAN_INTERVAL] == 15
     assert mock_config_entry.options[CONF_CATALOG_INTERVAL] == 60
     assert mock_config_entry.options[CONF_TIMEOUT] == 5

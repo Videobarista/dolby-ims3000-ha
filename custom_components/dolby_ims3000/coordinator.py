@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import logging
-import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+import logging
+import time
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -14,7 +14,13 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .api import IMSClient, IMSCommandError, IMSConnectionError
-from .const import CONF_CATALOG_INTERVAL, DEFAULT_CATALOG_INTERVAL, DOMAIN
+from .const import (
+    CONF_ALLOW_CONTROL,
+    CONF_ALLOW_DELETE,
+    CONF_CATALOG_INTERVAL,
+    DEFAULT_CATALOG_INTERVAL,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,9 +50,9 @@ class IMSData:
     current_schedule_info: dict[str, Any] = field(default_factory=dict)
     next_schedule: int | None = None
     next_schedule_info: dict[str, Any] = field(default_factory=dict)
-    # Every schedule entry we've looked up this session, keyed by schedule id.
-    # Static once fetched (a schedule's annotation and SPL don't change), so
-    # this is a plain cache, never invalidated.
+    # Schedule entries looked up this session, keyed by schedule id.  A
+    # schedule's annotation and SPL don't change once created, so entries are
+    # never refreshed; the oldest are dropped beyond MAX_SCHEDULE_CACHE.
     schedule_info: dict[int, dict[str, Any]] = field(default_factory=dict)
     # SPL uuid -> name, learned opportunistically from schedule_info above.
     # The protocol has no "get SPL name" command; a schedule entry's
@@ -69,6 +75,11 @@ class IMSData:
         if not info:
             return None
         return info.get("content_title_text") or None
+
+
+# Enough for a long festival day of current/next lookups, small enough that a
+# server running for months never grows the cache without bound.
+MAX_SCHEDULE_CACHE = 64
 
 
 class IMSCoordinator(DataUpdateCoordinator[IMSData]):
@@ -110,6 +121,20 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
         self._catalog_every: int = entry.options.get(
             CONF_CATALOG_INTERVAL, DEFAULT_CATALOG_INTERVAL
         )
+
+    @property
+    def control_allowed(self) -> bool:
+        """Whether this entry may change anything on the server.
+
+        Entries created before this option existed have no value stored and
+        keep the behaviour they always had: control allowed.
+        """
+        return bool(self.entry.options.get(CONF_ALLOW_CONTROL, True))
+
+    @property
+    def delete_allowed(self) -> bool:
+        """Whether the delete button may remove content.  Off unless enabled."""
+        return bool(self.entry.options.get(CONF_ALLOW_DELETE, False))
 
     async def _async_update_data(self) -> IMSData:
         data = self.data or IMSData()
@@ -251,6 +276,11 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
             if result is not None:
                 setattr(data, attr, result)
 
+        # Forget names of show playlists that no longer exist on the server.
+        if data.spl_ids:
+            known = set(data.spl_ids)
+            data.spl_names = {k: v for k, v in data.spl_names.items() if k in known}
+
         # Populate titles for any CPL we have not seen yet, bounded per cycle so
         # a large library cannot stall the poll loop.
         unknown = [c for c in data.cpl_ids if c not in data.cpl_info][:10]
@@ -280,6 +310,8 @@ class IMSCoordinator(DataUpdateCoordinator[IMSData]):
             or {}
         )
         data.schedule_info[schedule_id] = info
+        while len(data.schedule_info) > MAX_SCHEDULE_CACHE:
+            data.schedule_info.pop(next(iter(data.schedule_info)))
 
         spl_id = info.get("spl_id")
         name = info.get("annotation_text")

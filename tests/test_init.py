@@ -5,12 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.dolby_ims3000.api import IMSConnectionError
@@ -21,6 +15,12 @@ from custom_components.dolby_ims3000.const import (
     SERVICE_RAW_COMMAND,
     SERVICE_VALIDATE_CPL,
 )
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import entity_registry as er
+from homeassistant.setup import async_setup_component
 
 from .const import TITLE
 

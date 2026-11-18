@@ -1,0 +1,24 @@
+target-version = "py313"
+line-length = 100
+
+[lint]
+select = [
+    "B",    # bugbear
+    "BLE",  # blind except
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "S",    # bandit security checks
+    "SIM",  # simplify
+    "UP",   # pyupgrade
+    "W",    # pycodestyle warnings
+]
+
+[lint.per-file-ignores]
+# pytest is built around assert.
+"tests/**" = ["S101"]
+
+[lint.isort]
+force-sort-within-sections = true
+known-first-party = ["homeassistant"]
+combine-as-imports = true

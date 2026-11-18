@@ -16,10 +16,10 @@ divergences from that reference are deliberate and marked ``FIXED:`` below.
 
 from __future__ import annotations
 
-import logging
-import uuid
 from collections.abc import Callable
+import logging
 from typing import Any, NamedTuple
+import uuid
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,7 +78,9 @@ def enc_text(value: Any, size: int | None = None) -> bytes:
     raw = str(value).encode("utf-8")
     if size is not None:
         if len(raw) > size:
-            raw = raw[:size]
+            # Cut on a character boundary so the server never sees half of a
+            # multi-byte UTF-8 sequence.
+            raw = raw[:size].decode("utf-8", errors="ignore").encode("utf-8")
         # FIXED: dcitools right-justifies (pads on the *left* with NULs), which
         # produces a leading-NUL string no server would parse.  Fixed-width text
         # fields in this protocol are NUL-terminated / NUL-padded on the right.
@@ -201,14 +203,18 @@ CPL_VALIDATION = {
 
 RC_TRAILER = Field("return_code", -1, None, dec_int)
 
+# Commands that store content on the server (StoreCPL, StoreSPL) are
+# deliberately left out of this table: nothing in the integration needs them, and
+# a command that is not in the table cannot be sent.  DeleteCPL is here only for
+# the "Delete current composition" button, which has its own option; it is not
+# read-only, so raw_command cannot send it.
 REQUESTS: tuple[Request, ...] = (
+    Request("DeleteCPL", _k("010500"), (Arg("uuid", enc_uuid),)),
     # ---- CPL ----
     Request("GetCPLList", _k("010100")),
     Request("GetCPLInfo", _k("010300"), (Arg("uuid", enc_uuid),)),
     Request("GetCPLInfo2", _k("010301"), (Arg("uuid", enc_uuid),)),
-    Request("DeleteCPL", _k("010500"), (Arg("uuid", enc_uuid),)),
     Request("RetrieveCPL", _k("010700"), (Arg("uuid", enc_uuid),)),
-    Request("StoreCPL", _k("010900"), (Arg("xml", enc_text),)),
     Request("ValidateCPL", _k("010B00"), (
         Arg("uuid", enc_uuid),
         Arg("time", enc_text, {"size": 32}),
@@ -223,7 +229,6 @@ REQUESTS: tuple[Request, ...] = (
     Request("GetKDMInfo2", _k("020301"), (Arg("uuid", enc_uuid),)),
     # ---- SPL / playback ----
     Request("GetSPLList", _k("030100")),
-    Request("StoreSPL", _k("031F00"), (Arg("xml", enc_text),)),
     Request("ValidateSPL", _k("032500"), (
         Arg("uuid", enc_uuid),
         Arg("time", enc_text, {"size": 32}),
@@ -307,6 +312,7 @@ _STATUS_COMMON: tuple[Field, ...] = (
 )
 
 RESPONSES: tuple[Response, ...] = (
+    Response("DeleteCPL", _k("010600"), (RC_TRAILER,)),
     Response("GetCPLList", _k("010200"), _list_fields()),
     Response("GetCPLInfo", _k("010400"), _CPL_COMMON + (
         Field("crypto_key_id_list", 176, -1, dec_uuid_list),
@@ -331,8 +337,6 @@ RESPONSES: tuple[Response, ...] = (
         Field("content_version_id", -25, -9, dec_uuid),
         RC_TRAILER,
     )),
-    Response("DeleteCPL", _k("010600"), (RC_TRAILER,)),
-    Response("StoreCPL", _k("010A00"), (RC_TRAILER,)),
     Response("RetrieveCPL", _k("010800"), (
         Field("xml", 0, -1, dec_text), RC_TRAILER,
     )),
@@ -371,7 +375,6 @@ RESPONSES: tuple[Response, ...] = (
         RC_TRAILER,
     )),
     Response("GetSPLList", _k("030200"), _list_fields()),
-    Response("StoreSPL", _k("032000"), (RC_TRAILER,)),
     Response("ValidateSPL", _k("032600"), (
         Field("result", 0, 1, dec_int),
         Field("error_code", 1, 2, dec_int, {
@@ -482,17 +485,65 @@ REQUEST_BY_NAME: dict[str, Request] = {r.name: r for r in REQUESTS}
 RESPONSE_BY_KEY: dict[bytes, Response] = {r.key: r for r in RESPONSES}
 RESPONSE_BY_NAME: dict[str, Response] = {r.name: r for r in RESPONSES}
 
+# Requests that only read state.  Everything else in REQUESTS changes something
+# on the server (play, pause, schedule, scheduler on/off, ingest, delete).
+READ_ONLY_REQUESTS: frozenset[str] = frozenset(
+    {
+        "GetAPIProtocolVersion",
+        "GetCPLInfo",
+        "GetCPLInfo2",
+        "GetCPLList",
+        "GetCPLMarker",
+        "GetCPLPlayStat",
+        "GetCPLSize",
+        "GetCurrentSchedule",
+        "GetKDMInfo",
+        "GetKDMInfo2",
+        "GetKDMList",
+        "GetLog",
+        "GetLogLastId",
+        "GetNextSchedule",
+        "GetProductCertificate",
+        "GetProductInfo",
+        "GetSPLList",
+        "GetScheduleInfo2",
+        "GetSchedulerEnable",
+        "GetTimeZone",
+        "IngestGetJobStatus",
+        "RetrieveCPL",
+        "StatusSPL",
+        "StatusSPL2",
+        "ValidateCPL",
+        "ValidateSPL",
+        "WhoAmI",
+    }
+)
+
+
+def expected_response_key(name: str) -> bytes | None:
+    """Key the server answers a request with, when the table knows it."""
+    response = RESPONSE_BY_NAME.get(name)
+    return response.key if response is not None else None
+
 
 # --------------------------------------------------------------------------
 # Frame build / parse
 # --------------------------------------------------------------------------
 
-def build_request(name: str, request_id: int, /, *args: Any, **kwargs: Any) -> bytes:
-    """Build a complete outbound KLV frame."""
+def encode_request(name: str, /, *args: Any, **kwargs: Any) -> tuple[bytes, bytes]:
+    """Encode a request's arguments.  Returns ``(key, encoded_arguments)``.
+
+    Raises ProtocolError for an unknown command, a missing or unexpected
+    parameter, or a value that does not fit its field.
+    """
     try:
         definition = REQUEST_BY_NAME[name]
     except KeyError:
         raise ProtocolError(f"unknown request {name!r}") from None
+
+    unexpected = set(kwargs) - {arg.name for arg in definition.args}
+    if unexpected:
+        raise ProtocolError(f"{name}: unexpected parameter(s) {sorted(unexpected)}")
 
     chunks: list[bytes] = []
     positional = list(args)
@@ -510,8 +561,21 @@ def build_request(name: str, request_id: int, /, *args: Any, **kwargs: Any) -> b
         except Exception as err:  # noqa: BLE001 - surfaced as protocol error
             raise ProtocolError(f"{name}: bad value for {arg.name!r}: {err}") from err
 
-    payload = (request_id & 0xFFFFFFFF).to_bytes(ID_LEN, "big") + b"".join(chunks)
-    return HEADER + definition.key + encode_ber(len(payload)) + payload
+    if positional:
+        raise ProtocolError(f"{name}: too many parameters")
+    return definition.key, b"".join(chunks)
+
+
+def frame_request(key: bytes, request_id: int, encoded_args: bytes) -> bytes:
+    """Wrap encoded arguments in the KLV header, length and request id."""
+    payload = (request_id & 0xFFFFFFFF).to_bytes(ID_LEN, "big") + encoded_args
+    return HEADER + key + encode_ber(len(payload)) + payload
+
+
+def build_request(name: str, request_id: int, /, *args: Any, **kwargs: Any) -> bytes:
+    """Build a complete outbound KLV frame."""
+    key, encoded = encode_request(name, *args, **kwargs)
+    return frame_request(key, request_id, encoded)
 
 
 def parse_payload(key: bytes, payload: bytes) -> dict[str, Any]:

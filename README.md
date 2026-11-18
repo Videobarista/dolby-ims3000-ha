@@ -8,6 +8,7 @@
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
 [![GitHub release](https://img.shields.io/github/v/release/Videobarista/dolby-ims3000-ha)](https://github.com/Videobarista/dolby-ims3000-ha/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Videobarista&repository=dolby-ims3000-ha&category=integration)
 
 Home Assistant integration for Dolby (formerly Doremi) digital cinema servers, speaking the
@@ -25,6 +26,7 @@ set — if you run one of those, an issue with your results is welcome.
 |---|---|---|
 | Media player | `media_player` | Playback state, current title, position/duration of that title, play, pause, show selection |
 | Scheduler | `switch` | Enables or disables the server's automatic show scheduler |
+| Delete current composition | `button` | Deletes the composition loaded in the show. Off unless *Allow deleting content* is on |
 | Armed show | `select` | Picks which show playlist play actions will target |
 | Playback state | `sensor` | Stopped / playing / paused |
 | Current title | `sensor` | Content title of the composition on screen |
@@ -41,16 +43,58 @@ set — if you run one of those, an issue with your results is welcome.
 
 ## Services
 
-| Service | Purpose |
-|---|---|
-| `dolby_ims3000.play_spl` | Schedules a show playlist to start after a short delay |
-| `dolby_ims3000.validate_cpl` | Asks whether a composition is playable now, including key status |
-| `dolby_ims3000.ingest_job` | Submits an ingest job |
-| `dolby_ims3000.raw_command` | Sends any supported protocol command and returns the decoded reply |
+| Service | Purpose | Needs control |
+|---|---|---|
+| `dolby_ims3000.play_spl` | Schedules a show playlist to start after a short delay | yes |
+| `dolby_ims3000.ingest_job` | Submits an ingest job | yes |
+| `dolby_ims3000.validate_cpl` | Asks whether a composition is playable now, including key status | no |
+| `dolby_ims3000.raw_command` | Sends a read-only protocol command and returns the decoded reply | no |
 
-`raw_command` exists so you can probe your own hardware from Developer Tools without editing
-Python. Outside Home Assistant, `tools/probe.py` does the same from a terminal — read-only, no
-dependencies beyond Python 3. Start with `python3 tools/probe.py <host> --list-commands`.
+`raw_command` exists so you can look at your own hardware from Developer Tools without editing
+Python. It only accepts commands that read state; anything that changes the server has its own
+entity or action. Outside Home Assistant, `tools/probe.py` does the same from a terminal, with
+no dependencies beyond Python 3. Start with `python3 tools/probe.py <host> --list-commands`.
+
+Input is checked before anything is sent: playlist and composition ids must be UUIDs, the
+annotation is one line of at most 127 bytes, and an ingest job description is at most 64 KiB.
+
+### Deleting a composition
+
+The *Delete current composition* button removes the composition that is loaded in the show,
+for example a film that turns out to be faulty during a check. A deleted composition cannot be
+brought back, so the button is guarded:
+
+- It does nothing until you enable **Allow deleting content** in the integration options. That
+  option is separate from playback control and off by default.
+- It refuses while the show is playing. Pause or stop first.
+- It reads which composition is loaded from the server at the moment you press it, so a show
+  that has moved on to the next film never takes the wrong one with it.
+- If the server refuses, for instance because the composition is still part of the loaded
+  show, you see its answer as an error.
+- Every deletion is written to the Home Assistant log at warning level, with title and UUID.
+
+The button is a configuration entity, so it never appears on an automatically generated
+dashboard. To put it on your own dashboard, add a confirmation dialog so a stray tap cannot
+delete anything:
+
+```yaml
+type: button
+entity: button.dolby_ims3000_delete_current_composition
+name: Delete current film
+icon: mdi:delete-forever
+tap_action:
+  action: perform-action
+  perform_action: button.press
+  target:
+    entity_id: button.dolby_ims3000_delete_current_composition
+  confirmation:
+    text: Delete the film that is loaded in the show from the server? This cannot be undone.
+```
+
+The entity id above is the one you get with the default server name; check yours under
+*Settings → Devices & services*. The button also carries the title and UUID of the loaded
+composition as attributes (`title`, `cpl_id`), so a template or Mushroom card can show which
+film it will delete.
 
 ---
 
@@ -150,18 +194,42 @@ unreachable, because cinema servers are routinely switched off when Home Assista
 config flow verifies the host instead. *Entity event setup* does not apply, as the entities only
 read polled data.
 
-The test suite covers the config, reconfigure and options flows, setup and unload, and setup
-while the server is switched off. Run it with `pip install -r requirements_test.txt` followed by
-`pytest`.
+The test suite covers the config, reconfigure and options flows, setup and unload, setup
+while the server is switched off, the actions and their input validation, the safeguards of
+the delete button, and how the protocol
+layer handles malformed, oversized, truncated and unexpected replies. Run it with
+`pip install -r requirements_test.txt` followed by `pytest`.
 
 ---
 
 ## Security
 
 The KLV protocol has no authentication and no encryption: anyone who can reach TCP 11730 on
-the server can control it. Keep cinema servers on a separate VLAN and never expose them to
-the internet. Playback control is off by default. See [SECURITY.md](SECURITY.md) for the
-full picture and how to report a vulnerability.
+the server can control it. That cannot be fixed in an integration, only on the network.
+
+What the integration does on its side:
+
+- **Control is off by default** for a newly added server, and one option switches every
+  write path: play, pause, the scheduler switch, `play_spl` and `ingest_job`.
+- **Deleting content has its own option**, also off by default, and only the *Delete current
+  composition* button uses it. Commands that store content are not in the code at all, and
+  `raw_command` is limited to commands that read.
+- **Replies are treated as untrusted**: frames are size-limited, every read has a timeout, a
+  malformed frame drops the connection, and a reply of the wrong type is refused.
+- **Nothing is stored except host, port and options.** Diagnostics leave out the serial
+  number, the address, film titles, show names and schedule annotations.
+- **No listening ports and no outbound connections** other than to the server you configure.
+
+Recommended network setup:
+
+- Put the cinema server, projector and audio processor in their own VLAN.
+- Allow only Home Assistant → server on TCP 11730. Home Assistant always opens the
+  connection, so nothing needs to be allowed in the other direction.
+- Reach the server's web interface only from the device you manage it with.
+- Block the cinema VLAN from the internet and from other VLANs, except what it really needs,
+  such as NTP and the sources it ingests from.
+
+See [SECURITY.md](SECURITY.md) for the details and how to report a vulnerability.
 
 ---
 
@@ -169,8 +237,10 @@ full picture and how to report a vulnerability.
 
 This talks to equipment that runs live performances.
 
-- Control is a per-server option. Turn it off and the integration becomes read-only; play, pause
-  and scheduler changes are refused with a clear error.
+- Control is a per-server option. Leave it off and the integration is monitoring only: play,
+  pause, scheduler changes, `play_spl` and `ingest_job` are refused with a clear error.
+- Deleting content is a second, separate option. Leave it off and the delete button refuses
+  every press.
 - Polling is deliberately split: playback state is read often, the content catalogue rarely.
   Raise *Catalogue refresh* to keep traffic off the projection network.
 - One TCP connection is held open and every command is serialised behind a lock, because the

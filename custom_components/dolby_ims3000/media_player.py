@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import UTC, datetime, timedelta
+import logging
 from typing import Any
 
 from homeassistant.components.media_player import (
@@ -20,7 +20,6 @@ from homeassistant.util import dt as dt_util
 
 from . import IMSConfigEntry
 from .api import IMSError
-from .const import CONF_ALLOW_CONTROL
 from .coordinator import IMSCoordinator
 from .entity import IMSEntity
 
@@ -56,7 +55,7 @@ class IMSMediaPlayer(IMSEntity, MediaPlayerEntity):
 
     @property
     def _control_allowed(self) -> bool:
-        return bool(self.coordinator.entry.options.get(CONF_ALLOW_CONTROL, True))
+        return self.coordinator.control_allowed
 
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:

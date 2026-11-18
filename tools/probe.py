@@ -9,7 +9,7 @@ and to produce a report that can be pasted into a GitHub issue.
     python3 tools/probe.py 10.0.0.50 --command GetSPLList
     python3 tools/probe.py 10.0.0.50 --full --raw > report.txt
 
-Read-only by default: it issues no command that changes server state.
+Read-only: it only issues commands that read state, including for --command.
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import sys
 from pathlib import Path
+import sys
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -30,6 +30,8 @@ DEFAULT_PORT = api.DEFAULT_PORT
 IMSClient = api.IMSClient
 IMSCommandError = api.IMSCommandError
 IMSConnectionError = api.IMSConnectionError
+IMSInvalidRequest = api.IMSInvalidRequest
+READ_ONLY_REQUESTS = klv.READ_ONLY_REQUESTS
 REQUEST_BY_NAME = klv.REQUEST_BY_NAME
 
 # Commands that only read.  Anything mutating is deliberately excluded.
@@ -61,6 +63,9 @@ async def run_one(client: IMSClient, name: str, params: dict[str, Any]) -> None:
     label = f"{name}({', '.join(f'{k}={v}' for k, v in params.items())})"
     try:
         result = await client.command(name, _check_return_code=False, **params)
+    except IMSInvalidRequest as err:
+        print(f"  {label}\n    -> invalid request: {err}")
+        return
     except IMSCommandError as err:
         print(f"  {label}\n    -> command error: {err}")
         return
@@ -77,6 +82,10 @@ async def run_one(client: IMSClient, name: str, params: dict[str, Any]) -> None:
 
 
 async def probe(args: argparse.Namespace) -> int:
+    if args.command and args.command not in READ_ONLY_REQUESTS:
+        print(f"{args.command} is not a read-only command; see --list-commands")
+        return 2
+
     client = IMSClient(host=args.host, port=args.port, timeout=args.timeout)
 
     print("# Dolby/Doremi cinema server probe")
@@ -128,7 +137,6 @@ async def probe(args: argparse.Namespace) -> int:
     print(
         "\n## please report\n"
         "  - anything above marked 'decode failure' or 'unknown key'\n"
-        "  - whether playlist position/duration look like seconds or frames\n"
         "  - the product name and software version reported\n"
     )
     return 0
@@ -152,7 +160,8 @@ def main() -> int:
         for name in sorted(REQUEST_BY_NAME):
             req = REQUEST_BY_NAME[name]
             arglist = ", ".join(a.name for a in req.args) or "-"
-            print(f"{name:24} key={req.key.hex()}  args: {arglist}")
+            kind = "read" if name in READ_ONLY_REQUESTS else "changes state (blocked)"
+            print(f"{name:24} key={req.key.hex()}  args: {arglist:28} {kind}")
         return 0
 
     return asyncio.run(probe(args))

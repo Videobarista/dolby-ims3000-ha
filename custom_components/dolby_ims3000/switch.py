@@ -11,7 +11,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import IMSConfigEntry
 from .api import IMSError
-from .const import CONF_ALLOW_CONTROL
 from .coordinator import IMSCoordinator
 from .entity import IMSEntity
 
@@ -48,7 +47,7 @@ class IMSSchedulerSwitch(IMSEntity, SwitchEntity):
         await self._set(False)
 
     async def _set(self, enable: bool) -> None:
-        if not self.coordinator.entry.options.get(CONF_ALLOW_CONTROL, True):
+        if not self.coordinator.control_allowed:
             raise HomeAssistantError(
                 "Control is disabled for this server. Enable it in the "
                 "integration options first."
