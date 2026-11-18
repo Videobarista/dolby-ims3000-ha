@@ -150,10 +150,10 @@ created through it stay on the IMS3000.
 
 ## Important limitations
 
-These are properties of the protocol, not omissions in this integration.
+These are properties of the KLV protocol, not omissions in this integration.
 
-**There is no stop command.** The message set exposes play and pause only. The media player
-therefore advertises play and pause, and no stop.
+**The KLV protocol has no stop command.** Its message set exposes play and pause only, so the
+media player advertises play and pause, and no stop.
 
 **There is no volume control.** Audio level lives in the sound processor — a CP750, CP850 or
 CP950 — which is a separate device with a separate API.

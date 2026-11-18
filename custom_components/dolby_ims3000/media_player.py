@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-import logging
 from typing import Any
 
 from homeassistant.components.media_player import (
@@ -22,8 +21,6 @@ from . import IMSConfigEntry
 from .api import IMSError
 from .coordinator import IMSCoordinator
 from .entity import IMSEntity
-
-_LOGGER = logging.getLogger(__name__)
 
 STATE_MAP = {
     0: MediaPlayerState.IDLE,

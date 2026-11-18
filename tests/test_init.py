@@ -22,7 +22,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
 
-from .const import TITLE
+from .const import CPL_ID, TITLE
 
 
 def _entity_id(hass: HomeAssistant, entry: MockConfigEntry, platform: str, key: str) -> str:
@@ -114,7 +114,7 @@ async def test_action_with_unknown_entry(hass: HomeAssistant) -> None:
         await hass.services.async_call(
             DOMAIN,
             SERVICE_VALIDATE_CPL,
-            {"entry_id": "does-not-exist", "cpl_id": "abc"},
+            {"entry_id": "does-not-exist", "cpl_id": CPL_ID},
             blocking=True,
             return_response=True,
         )

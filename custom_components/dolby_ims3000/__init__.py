@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-import logging
 from typing import Any
 import uuid
 
@@ -37,8 +36,6 @@ from .const import (
 )
 from .coordinator import IMSCoordinator
 from .klv import READ_ONLY_REQUESTS, REQUEST_BY_NAME
-
-_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
